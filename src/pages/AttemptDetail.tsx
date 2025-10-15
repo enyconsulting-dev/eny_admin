@@ -107,6 +107,41 @@ const AttemptDetail = () => {
     abandoned: "Candidate exited before completion.",
     closed: "Attempt was closed by an administrator.",
   };
+  const statusKey = attempt?.status?.toLowerCase?.() ?? "unknown";
+
+  const summaryCards = useMemo(
+    () =>
+      attempt
+        ? [
+            {
+              key: "status",
+              label: "Current status",
+              value: attempt.status,
+              description: statusCopy[statusKey] ?? "Attempt status is being tracked.",
+              icon: Sparkles,
+            },
+            {
+              key: "created",
+              label: "Created at",
+              value: format(new Date(attempt.createdAt), "MMM d, yyyy h:mm a"),
+              description: "When this attempt record was created.",
+              icon: CalendarClock,
+            },
+            {
+              key: "progress",
+              label: "Progress",
+              value: attempt.startedAt ? (attempt.endedAt ? "Completed" : "In progress") : "Not started",
+              description: attempt.startedAt
+                ? attempt.endedAt
+                  ? "Candidate submitted their attempt."
+                  : "Candidate has started but not ended the attempt."
+                : "Waiting for the candidate to begin.",
+              icon: Loader2,
+            },
+          ]
+        : [],
+    [attempt, statusKey, statusCopy],
+  );
 
   const getStateIcon = (state: boolean) => {
   return state ? (
@@ -259,41 +294,7 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
     return null;
   }
 
-  const statusKey = attempt.status?.toLowerCase?.() ?? "unknown";
-  const summaryCards = useMemo(
-    () => [
-      {
-        key: "status",
-        label: "Current status",
-        value: attempt.status,
-        description: statusCopy[statusKey] ?? "Attempt status is being tracked.",
-        icon: Sparkles,
-      },
-      {
-        key: "created",
-        label: "Created at",
-        value: format(new Date(attempt.createdAt), "MMM d, yyyy h:mm a"),
-        description: "When this attempt record was created.",
-        icon: CalendarClock,
-      },
-      {
-        key: "progress",
-        label: "Progress",
-        value: attempt.startedAt
-          ? attempt.endedAt
-            ? "Completed"
-            : "In progress"
-          : "Not started",
-        description: attempt.startedAt
-          ? attempt.endedAt
-            ? "Candidate submitted their attempt."
-            : "Candidate has started but not ended the attempt."
-          : "Waiting for the candidate to begin.",
-        icon: Loader2,
-      },
-    ],
-    [attempt.createdAt, attempt.endedAt, attempt.startedAt, attempt.status, statusKey],
-  );
+  const cardsToRender = attempt ? summaryCards : [];
 
   return (
     <DashboardLayout>
@@ -320,7 +321,7 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          {summaryCards.map((card, idx) => {
+          {cardsToRender.map((card, idx) => {
             const Icon = card.icon;
             return (
               <Card
@@ -353,7 +354,7 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
                 Assessment
               </CardTitle>
               <Badge variant="outline" className="font-mono text-xs text-muted-foreground">
-                {attempt.assessmentId._id}
+                {attempt.assessmentId._id.slice(0, 8)}...{attempt.assessmentId._id.slice(-4)}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -521,7 +522,7 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
                   <div className="space-y-2">
                     <p className="text-xs font-medium uppercase text-muted-foreground">Lock ID</p>
                     <p className="rounded-md border border-border/70 bg-muted/20 p-2 font-mono text-xs text-muted-foreground dark:bg-muted/10">
-                      {attempt.lockId}
+                      {attempt.lockId.slice(0, 50)}...{attempt.lockId.slice(-8)}
                     </p>
                   </div>
                 )}

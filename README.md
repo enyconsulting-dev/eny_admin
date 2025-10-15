@@ -1,73 +1,153 @@
-# Welcome to your Lovable project
+# Deployment
 
-## Project info
+This project is a Vite + React + TypeScript SPA. Build artifacts are static files in dist that can be served by any static host or web server.
 
-**URL**: https://lovable.dev/projects/fccd55ef-4641-43c6-8b48-0a81cfabeef5
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/fccd55ef-4641-43c6-8b48-0a81cfabeef5) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Build
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# install dependencies
+npm ci
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# build for production
+npm run build
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# optional: preview the production build locally
+npm run preview
 ```
 
-**Edit a file directly in GitHub**
+Artifacts will be generated in dist/.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Environment variables
 
-**Use GitHub Codespaces**
+- At build time, variables must be prefixed with VITE_ (e.g., VITE_API_URL).
+- Create .env.production or configure variables in your hosting platform.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Static hosting (any provider)
 
-## What technologies are used for this project?
+- Run the build.
+- Upload the contents of dist/ to your static host (S3+CDN, Cloudflare Pages, Azure Static Web Apps, etc.).
+- Ensure your host rewrites all routes to /index.html for client-side routing.
 
-This project is built with:
+## Nginx
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Example server block:
 
-## How can I deploy this project?
+```
+server {
+    listen 80;
+    server_name your.domain.com;
 
-Simply open [Lovable](https://lovable.dev/projects/fccd55ef-4641-43c6-8b48-0a81cfabeef5) and click on Share -> Publish.
+    root /var/www/app/dist;
+    index index.html;
 
-## Can I connect a custom domain to my Lovable project?
+    location / {
+        try_files $uri /index.html;
+    }
 
-Yes, you can!
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+}
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Vercel
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- New Project → Import your repo.
+- Framework preset: Vite.
+- Build command: npm run build
+- Output directory: dist
+- Configure env vars (VITE_*) in Project Settings.
+
+## Netlify
+
+- New site from Git → pick your repo.
+- Build command: npm run build
+- Publish directory: dist
+- For SPA routing, add _redirects with:
+    ```
+    /* /index.html 200
+    ```
+
+Optional netlify.toml:
+```
+[build]
+    command = "npm run build"
+    publish = "dist"
+
+[[redirects]]
+    from = "/*"
+    to = "/index.html"
+    status = 200
+```
+
+## GitHub Pages (via Actions)
+
+- Settings → Pages → Source: GitHub Actions.
+- Add .github/workflows/pages.yml:
+
+```yaml
+name: Deploy to GitHub Pages
+on:
+    push:
+        branches: [ main ]
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+                with: { node-version: 20 }
+            - run: npm ci
+            - run: npm run build
+            - uses: actions/upload-pages-artifact@v3
+                with: { path: dist }
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        environment: { name: github-pages, url: ${{ steps.deployment.outputs.page_url }} }
+        steps:
+            - id: deployment
+                uses: actions/deploy-pages@v4
+```
+
+If serving from a subpath, set base in vite.config.ts:
+```
+export default defineConfig({ base: '/repo-name/' })
+```
+
+## Docker (Nginx)
+
+Dockerfile:
+```
+# build
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# serve
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+# SPA routing
+RUN printf 'server { listen 80; root /usr/share/nginx/html; location / { try_files $uri /index.html; } }\n' > /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx","-g","daemon off;"]
+```
+
+Build and run:
+```sh
+docker build -t app .
+docker run -p 8080:80 app
+```
+
+## Notes
+
+- For non-root paths, configure base in Vite as shown above.
+- Ensure correct cache headers for static assets and SPA fallback to index.html.
+- Use HTTPS and a CDN where possible for best performance.
