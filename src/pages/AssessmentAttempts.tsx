@@ -120,8 +120,10 @@ const AssessmentAttempts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedAssessment, setSelectedAssessment] = useState("");
+  const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [attemptMode, setAttemptMode] = useState<"single" | "multi">("single");
 
   const {
     data: attemptsData,
@@ -153,11 +155,36 @@ const AssessmentAttempts = () => {
       queryClient.invalidateQueries({ queryKey: ["attempts"] });
       setIsCreateDialogOpen(false);
       setSelectedAssessment("");
+      setSelectedAssessments([]);
       setSelectedUser("");
+      setAttemptMode("single");
     },
     onError: (error: any) => {
       toast({
         title: "Unable to create attempt",
+        description:
+          error?.message || "Please review your selections and try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createAttemptsManyMutation = useMutation({
+    mutationFn: appService.createAttemptsMany,
+    onSuccess: () => {
+      toast({
+        title: "Attempts created",
+        description: "The candidate can now begin their assessments.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["attempts"] });
+      setIsCreateDialogOpen(false);
+      setSelectedAssessments([]);
+      setSelectedUser("");
+      setAttemptMode("single");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Unable to create attempts",
         description:
           error?.message || "Please review your selections and try again.",
         variant: "destructive",
@@ -219,18 +246,33 @@ const AssessmentAttempts = () => {
   const completedAttempts = statusSummary.completed ?? 0;
 
   const handleCreateAttempt = () => {
-    if (!selectedAssessment || !selectedUser) {
-      toast({
-        title: "Selection required",
-        description: "Choose both an assessment and a candidate to continue.",
-        variant: "destructive",
+    if (attemptMode === "single") {
+      if (!selectedAssessment || !selectedUser) {
+        toast({
+          title: "Selection required",
+          description: "Choose both an assessment and a candidate to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
+      createAttemptMutation.mutate({
+        assessmentId: selectedAssessment,
+        userId: selectedUser,
       });
-      return;
+    } else {
+      if (selectedAssessments.length === 0 || !selectedUser) {
+        toast({
+          title: "Selection required",
+          description: "Choose assessments and a candidate to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
+      createAttemptsManyMutation.mutate({
+        userInfoId: selectedUser,
+        assessmentIds: selectedAssessments,
+      });
     }
-    createAttemptMutation.mutate({
-      assessmentId: selectedAssessment,
-      userId: selectedUser,
-    });
   };
 
   const handleDeleteAttempt = (attemptId: string) => {
@@ -321,70 +363,156 @@ const AssessmentAttempts = () => {
                 <DialogHeader>
                   <DialogTitle>Launch a candidate attempt</DialogTitle>
                   <DialogDescription>
-                    Choose the assessment and candidate you want to activate.
+                    Choose the assessment(s) and candidate you want to activate.
                     They can start immediately after creation.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Assessment</Label>
-                    <div className="rounded-lg border border-border/60 bg-muted/10">
-                      <Command>
-                        <CommandInput
-                          autoFocus
-                          disabled={assessmentsLoading}
-                          placeholder={
-                            assessmentsLoading
-                              ? "Loading assessments…"
-                              : "Search assessments…"
-                          }
-                          className="h-10 text-sm"
-                        />
-                        <CommandList className="max-h-56">
-                          <CommandEmpty className="py-6 text-sm text-muted-foreground">
-                            {assessmentsLoading
-                              ? "Fetching assessments…"
-                              : "No assessments found."}
-                          </CommandEmpty>
-                          <CommandGroup className="max-h-56 overflow-y-scroll no-scrollbar">
-                            {assessments.map((assessment: any) => (
-                              <CommandItem
-                                key={assessment._id}
-                                value={assessment.title}
-                                className="flex items-start gap-3 px-3 py-2 text-sm"
-                                onSelect={() =>
-                                  setSelectedAssessment(assessment._id)
-                                }
-                              >
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-foreground">
-                                    {assessment.title}
-                                  </span>
-                                  {assessment.description && (
-                                    <span className="text-xs text-muted-foreground line-clamp-1">
-                                      {assessment.description}
+                    <Label>Mode</Label>
+                    <Select value={attemptMode} onValueChange={(value: "single" | "multi") => {
+                      setAttemptMode(value);
+                      setSelectedAssessment("");
+                      setSelectedAssessments([]);
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Single Assessment</SelectItem>
+                        <SelectItem value="multi">Multiple Assessments</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{attemptMode === "single" ? "Assessment" : "Assessments"}</Label>
+                    {attemptMode === "single" ? (
+                      <div className="rounded-lg border border-border/60 bg-muted/10">
+                        <Command>
+                          <CommandInput
+                            autoFocus
+                            disabled={assessmentsLoading}
+                            placeholder={
+                              assessmentsLoading
+                                ? "Loading assessments…"
+                                : "Search assessments…"
+                            }
+                            className="h-10 text-sm"
+                          />
+                          <CommandList className="max-h-56">
+                            <CommandEmpty className="py-6 text-sm text-muted-foreground">
+                              {assessmentsLoading
+                                ? "Fetching assessments…"
+                                : "No assessments found."}
+                            </CommandEmpty>
+                            <CommandGroup className="max-h-56 overflow-y-scroll no-scrollbar">
+                              {assessments.map((assessment: any) => (
+                                <CommandItem
+                                  key={assessment._id}
+                                  value={assessment.title}
+                                  className="flex items-start gap-3 px-3 py-2 text-sm"
+                                  onSelect={() =>
+                                    setSelectedAssessment(assessment._id)
+                                  }
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-foreground">
+                                      {assessment.title}
                                     </span>
+                                    {assessment.description && (
+                                      <span className="text-xs text-muted-foreground line-clamp-1">
+                                        {assessment.description}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {selectedAssessment === assessment._id && (
+                                    <Badge
+                                      variant="outline"
+                                      className="ml-auto text-xs"
+                                    >
+                                      Selected
+                                    </Badge>
                                   )}
-                                </div>
-                                {selectedAssessment === assessment._id && (
-                                  <Badge
-                                    variant="outline"
-                                    className="ml-auto text-xs"
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-border/60 bg-muted/10">
+                        <Command>
+                          <CommandInput
+                            autoFocus
+                            disabled={assessmentsLoading}
+                            placeholder={
+                              assessmentsLoading
+                                ? "Loading assessments…"
+                                : "Search assessments…"
+                            }
+                            className="h-10 text-sm"
+                          />
+                          <CommandList className="max-h-56">
+                            <CommandEmpty className="py-6 text-sm text-muted-foreground">
+                              {assessmentsLoading
+                                ? "Fetching assessments…"
+                                : "No assessments found."}
+                            </CommandEmpty>
+                            <CommandGroup className="max-h-56 overflow-y-scroll no-scrollbar">
+                              {assessments.map((assessment: any) => {
+                                const isSelected = selectedAssessments.includes(assessment._id);
+                                return (
+                                  <CommandItem
+                                    key={assessment._id}
+                                    value={assessment.title}
+                                    className="flex items-start gap-3 px-3 py-2 text-sm"
+                                    onSelect={() => {
+                                      if (isSelected) {
+                                        setSelectedAssessments(prev => prev.filter(id => id !== assessment._id));
+                                      } else {
+                                        setSelectedAssessments(prev => [...prev, assessment._id]);
+                                      }
+                                    }}
                                   >
-                                    Selected
-                                  </Badge>
-                                )}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </div>
-                    {selectedAssessment && (
+                                    <div className="flex flex-col">
+                                      <span className="font-medium text-foreground">
+                                        {assessment.title}
+                                      </span>
+                                      {assessment.description && (
+                                        <span className="text-xs text-muted-foreground line-clamp-1">
+                                          {assessment.description}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {isSelected && (
+                                      <Badge
+                                        variant="outline"
+                                        className="ml-auto text-xs"
+                                      >
+                                        Selected
+                                      </Badge>
+                                    )}
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </div>
+                    )}
+                    {attemptMode === "single" && selectedAssessment && (
                       <p className="text-xs text-muted-foreground">
                         Selected assessment ID:{" "}
                         <span className="font-mono text-foreground/80">
                           {selectedAssessment}
+                        </span>
+                      </p>
+                    )}
+                    {attemptMode === "multi" && selectedAssessments.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Selected {selectedAssessments.length} assessment{selectedAssessments.length !== 1 ? 's' : ''}:{" "}
+                        <span className="font-mono text-foreground/80">
+                          {selectedAssessments.join(", ")}
                         </span>
                       </p>
                     )}
@@ -464,15 +592,15 @@ const AssessmentAttempts = () => {
                   </Button>
                   <Button
                     onClick={handleCreateAttempt}
-                    disabled={createAttemptMutation.isPending}
+                    disabled={createAttemptMutation.isPending || createAttemptsManyMutation.isPending}
                   >
-                    {createAttemptMutation.isPending ? (
+                    {(createAttemptMutation.isPending || createAttemptsManyMutation.isPending) ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creating…
                       </>
                     ) : (
-                      "Create attempt"
+                      `Create ${attemptMode === "single" ? "attempt" : "attempts"}`
                     )}
                   </Button>
                 </DialogFooter>

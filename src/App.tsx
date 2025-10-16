@@ -17,6 +17,8 @@ import AssessmentUsers from "./pages/AssessmentUsers";
 import AssessmentAttempts from "./pages/AssessmentAttempts";
 import AttemptDetail from "./pages/AttemptDetail";
 import AssessmentsList from "./pages/AssessmentsList";
+import Admins from "./pages/Admins";
+import AdminDetail from "./pages/AdminDetail";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Provider } from "react-redux";
@@ -51,6 +53,8 @@ const App = () => (
                 <Route path="/assessments/:id/users" element={<ProtectedRoute><AssessmentUsers /></ProtectedRoute>} />
                 <Route path="/assessments/attempts" element={<ProtectedRoute><AssessmentAttempts /></ProtectedRoute>} />
                 <Route path="/assessments/attempts/:id" element={<ProtectedRoute><AttemptDetail /></ProtectedRoute>} />
+                <Route path="/admins" element={<ProtectedRoute><Admins /></ProtectedRoute>} />
+                <Route path="/admins/:id" element={<ProtectedRoute><AdminDetail /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
