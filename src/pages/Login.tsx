@@ -97,7 +97,7 @@ const Login = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@eventpro.com"
+                  placeholder="admin@enyconsulting.ca"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

@@ -41,7 +41,7 @@ export function AppSidebar() {
             <Calendar className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg">EventPro</h1>
+            <h1 className="font-bold text-lg">Eny Consulting</h1>
             <p className="text-sm text-muted-foreground">Admin Dashboard</p>
           </div>
         </div>

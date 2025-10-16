@@ -198,4 +198,11 @@ export const appService = {
       throw error;
     }
   },
+  getAttemptEvents: (attemptId: string, page: number = 1, limit: number = 10) => {
+    try {
+      return apiClient.get(`/attempt-event-tracking/attempt/${attemptId}?page=${page}&limit=${limit}`);
+    } catch (error) {
+      throw error;
+    }
+  },
 };
