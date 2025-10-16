@@ -113,6 +113,13 @@ export const appService = {
       throw error;
     }
   },
+  createAttemptsMany: (data: { userInfoId: string; assessmentIds: string[] }) => {
+    try {
+      return apiClient.post("/attempts/many", data);
+    } catch (error) {
+      throw error;
+    }
+  },
   getAttempts: () => {
     try {
       return apiClient.get("/attempts");
@@ -130,6 +137,63 @@ export const appService = {
   getAttemptById: (attemptId: string) => {
     try {
       return apiClient.get(`/attempts/${attemptId}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Admin management
+  getAdmins: () => {
+    try {
+      return apiClient.get("/admins");
+    } catch (error) {
+      throw error;
+    }
+  },
+  createAdmin: (data: {firstName: string, lastName: string, email: string, password: string}) => {
+    try {
+      return apiClient.post("/admins", data);
+    } catch (error) {
+      throw error;
+    }
+  },
+  getAdminById: (id: string) => {
+    try {
+      return apiClient.get(`/admins/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  updateAdmin: (id: string, data: Partial<{firstName: string, lastName: string, email: string}>) => {
+    try {
+      return apiClient.patch(`/admins/${id}`, data);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deleteAdmin: (id: string) => {
+    try {
+      return apiClient.delete(`/admins/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  activateAdmin: (id: string) => {
+    try {
+      return apiClient.patch(`/admins/${id}/activate`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deactivateAdmin: (id: string) => {
+    try {
+      return apiClient.patch(`/admins/${id}/deactivate`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  inviteAdmin: (data: {firstName: string, lastName: string, email: string}) => {
+    try {
+      return apiClient.post("/admins/invite", data);
     } catch (error) {
       throw error;
     }
