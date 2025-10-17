@@ -1,17 +1,22 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   AlertCircle,
   ArrowLeft,
   CalendarClock,
-  Clock3,
+  Clock,
+  Activity,
+  CheckCircle2,
   Eye,
   Loader2,
+  Mail,
   Plus,
+  RefreshCcw,
   Search,
   Trash2,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -46,6 +51,8 @@ import {
 } from "@/components/ui/command";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { appService } from "@/lib/api/service";
 import {
@@ -55,6 +62,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface Attempt {
   _id: string;
@@ -244,6 +252,49 @@ const AssessmentAttempts = () => {
   const totalAttempts = attempts.length;
   const activeAttempts = statusSummary.active ?? 0;
   const completedAttempts = statusSummary.completed ?? 0;
+  const completionRate = totalAttempts
+    ? Math.round((completedAttempts / totalAttempts) * 100)
+    : 0;
+
+  const lastCreatedRelative = useMemo(() => {
+    const timestamps = attempts
+      .map((attempt) => attempt.createdAt)
+      .filter(Boolean)
+      .map((createdAt) => new Date(createdAt).getTime());
+    if (timestamps.length === 0) {
+      return null;
+    }
+    const latest = Math.max(...timestamps);
+    return formatDistanceToNow(new Date(latest), { addSuffix: true });
+  }, [attempts]);
+
+  const nextDeadlineRelative = useMemo(() => {
+    const futureDeadlines = attempts
+      .map((attempt) => attempt.serverDeadline)
+      .filter(Boolean)
+      .map((deadline) => new Date(deadline).getTime())
+      .filter((timestamp) => timestamp > Date.now());
+
+    if (futureDeadlines.length === 0) {
+      return null;
+    }
+
+    const nextDeadline = Math.min(...futureDeadlines);
+    return formatDistanceToNow(new Date(nextDeadline), { addSuffix: true });
+  }, [attempts]);
+
+  const upcomingDeadlineCount = useMemo(() => {
+    const now = Date.now();
+    const threshold = now + 24 * 60 * 60 * 1000;
+
+    return attempts.filter((attempt) => {
+      if (!attempt.serverDeadline) {
+        return false;
+      }
+      const deadline = new Date(attempt.serverDeadline).getTime();
+      return deadline >= now && deadline <= threshold;
+    }).length;
+  }, [attempts]);
 
   const handleCreateAttempt = () => {
     if (attemptMode === "single") {
@@ -292,21 +343,36 @@ const AssessmentAttempts = () => {
       label: "Total attempts",
       value: totalAttempts,
       description: "All tracked attempts across assessments.",
-      icon: Users,
+      icon: Sparkles,
+      accent: "bg-primary/10 text-primary",
+      hint: lastCreatedRelative ? `Latest ${lastCreatedRelative}` : "No attempts recorded yet",
     },
     {
       key: "active",
-      label: "Active right now",
+      label: "In progress",
       value: activeAttempts,
       description: "Candidates currently progressing through assessments.",
-      icon: Clock3,
+      icon: Activity,
+      accent: "bg-blue-500/10 text-blue-500",
+      hint: nextDeadlineRelative ? `Next deadline ${nextDeadlineRelative}` : "No upcoming deadlines",
+    },
+    {
+      key: "upcoming",
+      label: "Expiring soon",
+      value: upcomingDeadlineCount,
+      description: "Attempts expiring within 24 hours.",
+      icon: CalendarClock,
+      accent: "bg-amber-500/10 text-amber-500",
+      hint: nextDeadlineRelative ? `Earliest ${nextDeadlineRelative}` : "All deadlines clear",
     },
     {
       key: "completed",
-      label: "Completed",
-      value: completedAttempts,
-      description: "Finished attempts waiting for review or scoring.",
-      icon: CalendarClock,
+      label: "Completion rate",
+      value: `${completionRate}%`,
+      description: "Portion of attempts finished by candidates.",
+      icon: CheckCircle2,
+      accent: "bg-emerald-500/10 text-emerald-500",
+      hint: `${completedAttempts} of ${totalAttempts || 0} complete`,
     },
   ];
 
@@ -318,536 +384,577 @@ const AssessmentAttempts = () => {
     })),
   ];
 
-  return (
-    <DashboardLayout>
-      <div className="w-full space-y-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/assessments")}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <Badge
-                variant="outline"
-                className="border-primary/30 bg-primary/10 text-xs uppercase tracking-widest"
-              >
-                Attempts overview
-              </Badge>
-            </div>
+  const getCandidateInitials = (attempt: Attempt) => {
+    const first = attempt.userId?.firstName?.charAt(0) ?? "";
+    const last = attempt.userId?.lastName?.charAt(0) ?? "";
+    const fallback = `${first}${last}`.trim();
+    if (fallback) {
+      return fallback.toUpperCase();
+    }
+    const emailInitial = attempt.userId?.emailAddress?.charAt(0) ?? "C";
+    return emailInitial.toUpperCase();
+  };
+
+  const isCreatingAttempt =
+    createAttemptMutation.isPending || createAttemptsManyMutation.isPending;
+  const showingCount = filteredAttempts.length;
+
+  const renderDialogContent = (
+    <DialogContent className="max-h-[82vh] overflow-hidden overflow-y-scroll no-scrollbar rounded-3xl border border-border/60 bg-background/95 p-0 shadow-xl">
+      <div className="flex flex-col gap-6 p-6 sm:p-8">
+        <DialogHeader className="space-y-3 text-left">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Quick launch
+          </span>
+          <DialogTitle className="text-2xl font-semibold tracking-tight text-foreground">
+            Launch a candidate attempt
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Choose the assessment experience and candidate. Attempts activate instantly.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-5">
+          <div className="flex gap-2 flex-col">
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                Assessment attempts
-              </h1>
-              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Monitor candidate progress, activate new attempts, and keep an
-                eye on statuses in real time.
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Mode
+              </Label>
+              <Select
+                value={attemptMode}
+                onValueChange={(value: "single" | "multi") => {
+                  setAttemptMode(value);
+                  setSelectedAssessment("");
+                  setSelectedAssessments([]);
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-2xl border-border/60 bg-background/90">
+                  <SelectValue placeholder="Select attempt mode" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border border-border/60 bg-background/95">
+                  <SelectItem value="single">Single assessment</SelectItem>
+                  <SelectItem value="multi">Multiple assessments</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {attemptMode === "single"
+                  ? "Launch one assessment for the candidate."
+                  : "Queue several assessments in one sweep."}
               </p>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Dialog
-              open={isCreateDialogOpen}
-              onOpenChange={setIsCreateDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  New attempt
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[80vh] overflow-y-scroll no-scrollbar">
-                <DialogHeader>
-                  <DialogTitle>Launch a candidate attempt</DialogTitle>
-                  <DialogDescription>
-                    Choose the assessment(s) and candidate you want to activate.
-                    They can start immediately after creation.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Mode</Label>
-                    <Select value={attemptMode} onValueChange={(value: "single" | "multi") => {
-                      setAttemptMode(value);
-                      setSelectedAssessment("");
-                      setSelectedAssessments([]);
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="single">Single Assessment</SelectItem>
-                        <SelectItem value="multi">Multiple Assessments</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{attemptMode === "single" ? "Assessment" : "Assessments"}</Label>
-                    {attemptMode === "single" ? (
-                      <div className="rounded-lg border border-border/60 bg-muted/10">
-                        <Command>
-                          <CommandInput
-                            autoFocus
-                            disabled={assessmentsLoading}
-                            placeholder={
-                              assessmentsLoading
-                                ? "Loading assessments…"
-                                : "Search assessments…"
-                            }
-                            className="h-10 text-sm"
-                          />
-                          <CommandList className="max-h-56">
-                            <CommandEmpty className="py-6 text-sm text-muted-foreground">
-                              {assessmentsLoading
-                                ? "Fetching assessments…"
-                                : "No assessments found."}
-                            </CommandEmpty>
-                            <CommandGroup className="max-h-56 overflow-y-scroll no-scrollbar">
-                              {assessments.map((assessment: any) => (
-                                <CommandItem
-                                  key={assessment._id}
-                                  value={assessment.title}
-                                  className="flex items-start gap-3 px-3 py-2 text-sm"
-                                  onSelect={() =>
-                                    setSelectedAssessment(assessment._id)
-                                  }
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium text-foreground">
-                                      {assessment.title}
-                                    </span>
-                                    {assessment.description && (
-                                      <span className="text-xs text-muted-foreground line-clamp-1">
-                                        {assessment.description}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {selectedAssessment === assessment._id && (
-                                    <Badge
-                                      variant="outline"
-                                      className="ml-auto text-xs"
-                                    >
-                                      Selected
-                                    </Badge>
-                                  )}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg border border-border/60 bg-muted/10">
-                        <Command>
-                          <CommandInput
-                            autoFocus
-                            disabled={assessmentsLoading}
-                            placeholder={
-                              assessmentsLoading
-                                ? "Loading assessments…"
-                                : "Search assessments…"
-                            }
-                            className="h-10 text-sm"
-                          />
-                          <CommandList className="max-h-56">
-                            <CommandEmpty className="py-6 text-sm text-muted-foreground">
-                              {assessmentsLoading
-                                ? "Fetching assessments…"
-                                : "No assessments found."}
-                            </CommandEmpty>
-                            <CommandGroup className="max-h-56 overflow-y-scroll no-scrollbar">
-                              {assessments.map((assessment: any) => {
-                                const isSelected = selectedAssessments.includes(assessment._id);
-                                return (
-                                  <CommandItem
-                                    key={assessment._id}
-                                    value={assessment.title}
-                                    className="flex items-start gap-3 px-3 py-2 text-sm"
-                                    onSelect={() => {
-                                      if (isSelected) {
-                                        setSelectedAssessments(prev => prev.filter(id => id !== assessment._id));
-                                      } else {
-                                        setSelectedAssessments(prev => [...prev, assessment._id]);
-                                      }
-                                    }}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium text-foreground">
-                                        {assessment.title}
-                                      </span>
-                                      {assessment.description && (
-                                        <span className="text-xs text-muted-foreground line-clamp-1">
-                                          {assessment.description}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {isSelected && (
-                                      <Badge
-                                        variant="outline"
-                                        className="ml-auto text-xs"
-                                      >
-                                        Selected
-                                      </Badge>
-                                    )}
-                                  </CommandItem>
-                                );
-                              })}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </div>
-                    )}
-                    {attemptMode === "single" && selectedAssessment && (
-                      <p className="text-xs text-muted-foreground">
-                        Selected assessment ID:{" "}
-                        <span className="font-mono text-foreground/80">
-                          {selectedAssessment}
-                        </span>
-                      </p>
-                    )}
-                    {attemptMode === "multi" && selectedAssessments.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Selected {selectedAssessments.length} assessment{selectedAssessments.length !== 1 ? 's' : ''}:{" "}
-                        <span className="font-mono text-foreground/80">
-                          {selectedAssessments.join(", ")}
-                        </span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Candidate</Label>
-                    <div className="rounded-lg border border-border/60 bg-muted/10">
-                      <Command>
-                        <CommandInput
-                          disabled={usersLoading}
-                          placeholder={
-                            usersLoading
-                              ? "Loading candidates…"
-                              : "Search candidates…"
-                          }
-                          className="h-10 text-sm"
-                        />
-                        <CommandList className="max-h-56">
-                          <CommandEmpty className="py-6 text-sm text-muted-foreground">
-                            {usersLoading
-                              ? "Fetching candidates…"
-                              : "No candidates found."}
-                          </CommandEmpty>
-                          <CommandGroup className="max-h-56 overflow-y-scroll no-scrollbar">
-                            {users.map((user: any) => {
-                              const fullName =
-                                `${user.firstName} ${user.lastName}`.trim();
-                              return (
-                                <CommandItem
-                                  key={user._id}
-                                  value={`${fullName} ${user.emailAddress}`}
-                                  className="flex items-start gap-3 px-3 py-2 text-sm"
-                                  onSelect={() => setSelectedUser(user._id)}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium text-foreground">
-                                      {fullName || "Unnamed candidate"}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {user.emailAddress}
-                                    </span>
-                                  </div>
-                                  {selectedUser === user._id && (
-                                    <Badge
-                                      variant="outline"
-                                      className="ml-auto text-xs"
-                                    >
-                                      Selected
-                                    </Badge>
-                                  )}
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </div>
-                    {selectedUser && (
-                      <p className="text-xs text-muted-foreground">
-                        Selected candidate ID:{" "}
-                        <span className="font-mono text-foreground/80">
-                          {selectedUser}
-                        </span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <DialogFooter className="flex flex-wrap items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                    disabled={createAttemptMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleCreateAttempt}
-                    disabled={createAttemptMutation.isPending || createAttemptsManyMutation.isPending}
-                  >
-                    {(createAttemptMutation.isPending || createAttemptsManyMutation.isPending) ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating…
-                      </>
-                    ) : (
-                      `Create ${attemptMode === "single" ? "attempt" : "attempts"}`
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button
-              variant="ghost"
-              className="gap-2"
-              onClick={() => refetchAttempts()}
-              disabled={attemptsLoading}
-            >
-              <Loader2
-                className={`h-4 w-4 ${attemptsLoading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {summaryCards.map((summary) => {
-            const Icon = summary.icon;
-            return (
-              <Card
-                key={summary.key}
-                className="border border-border/60 bg-muted/30 shadow-sm dark:bg-muted/10"
-              >
-                <CardContent className="flex items-start justify-between gap-4 p-4">
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">
-                      {summary.label}
-                    </p>
-                    <p className="text-2xl font-semibold text-foreground">
-                      {summary.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {summary.description}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-primary/10 p-3 text-primary">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        <Card className="border border-border/60 shadow-sm">
-          <CardHeader className="gap-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <CardTitle>Attempt roster</CardTitle>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-                <div className="relative w-full md:w-64">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by assessment or candidate…"
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    className="pl-9"
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Candidate
+              </Label>
+              <div className="rounded-2xl border border-border/60 bg-muted/20">
+                <Command>
+                  <CommandInput
+                    disabled={usersLoading}
+                    placeholder={usersLoading ? "Loading candidates…" : "Search by name or email…"}
+                    className="h-11 border-b border-border/60 text-sm"
                   />
+                  <CommandList className="max-h-56">
+                    <CommandEmpty className="py-6 text-sm text-muted-foreground">
+                      {usersLoading ? "Fetching candidates…" : "No candidates found."}
+                    </CommandEmpty>
+                    <CommandGroup className="max-h-56 overflow-y-auto">
+                      {users.map((user: any) => {
+                        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Unnamed candidate";
+                        const isSelected = selectedUser === user._id;
+                        return (
+                          <CommandItem
+                            key={user._id}
+                            value={`${fullName} ${user.emailAddress}`}
+                            className="flex items-center gap-3 px-3 py-2 text-sm"
+                            onSelect={() => setSelectedUser(user._id)}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium text-foreground">{fullName}</span>
+                              <span className="text-xs text-muted-foreground">{user.emailAddress}</span>
+                            </div>
+                            {isSelected && (
+                              <Badge variant="outline" className="ml-auto rounded-full text-[11px] uppercase tracking-widest">
+                                Selected
+                              </Badge>
+                            )}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </div>
+              {selectedUser && (
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1 font-mono">
+                    {selectedUser}
+                  </span>
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="md:w-56">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusFilters.map((filter) => (
-                      <SelectItem key={filter.value} value={filter.value}>
-                        {filter.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {attemptMode === "single" ? "Assessment" : "Assessments"}
+            </Label>
+            <div className="rounded-2xl border border-border/60 bg-muted/20">
+              <Command>
+                <CommandInput
+                  disabled={assessmentsLoading}
+                  placeholder={assessmentsLoading ? "Loading assessments…" : "Search assessments…"}
+                  className="h-11 border-b border-border/60 text-sm"
+                />
+                <CommandList className="max-h-56">
+                  <CommandEmpty className="py-6 text-sm text-muted-foreground">
+                    {assessmentsLoading ? "Fetching assessments…" : "No assessments found."}
+                  </CommandEmpty>
+                  <CommandGroup className="max-h-56 overflow-y-auto">
+                    {assessments.map((assessment: any) => {
+                      const isSelected =
+                        attemptMode === "single"
+                          ? selectedAssessment === assessment._id
+                          : selectedAssessments.includes(assessment._id);
+                      return (
+                        <CommandItem
+                          key={assessment._id}
+                          value={`${assessment.title} ${assessment.description ?? ""}`}
+                          className="flex items-center gap-3 px-3 py-2 text-sm"
+                          onSelect={() => {
+                            if (attemptMode === "single") {
+                              setSelectedAssessment(assessment._id);
+                            } else {
+                              setSelectedAssessments((prev) =>
+                                prev.includes(assessment._id)
+                                  ? prev.filter((id) => id !== assessment._id)
+                                  : [...prev, assessment._id],
+                              );
+                            }
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground">{assessment.title}</span>
+                            {assessment.description && (
+                              <span className="text-xs text-muted-foreground line-clamp-1">
+                                {assessment.description}
+                              </span>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <Badge variant="outline" className="ml-auto rounded-full text-[11px] uppercase tracking-widest">
+                              Selected
+                            </Badge>
+                          )}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
+            {attemptMode === "single" && selectedAssessment && (
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1 font-mono">
+                  {selectedAssessment}
+                </span>
+              </div>
+            )}
+            {attemptMode === "multi" && selectedAssessments.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedAssessments.map((assessmentId) => {
+                  const assessment = assessments.find((item: any) => item._id === assessmentId);
+                  return (
+                    <Badge
+                      key={assessmentId}
+                      variant="outline"
+                      className="rounded-full border-border/60 bg-background/90 px-3 py-1 text-xs font-medium"
+                    >
+                      {assessment?.title ?? assessmentId}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="rounded-full px-4"
+            onClick={() => setIsCreateDialogOpen(false)}
+            disabled={isCreatingAttempt}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="gap-2 rounded-full px-5"
+            onClick={handleCreateAttempt}
+            disabled={isCreatingAttempt || assessmentsLoading || usersLoading}
+          >
+            {isCreatingAttempt ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              `Create ${attemptMode === "single" ? "attempt" : "attempts"}`
+            )}
+          </Button>
+        </DialogFooter>
+      </div>
+    </DialogContent>
+  );
+  return (
+    <DashboardLayout>
+      <TooltipProvider delayDuration={120}>
+        <div className="relative">
+          <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-primary/20 blur-[120px]" />
+          <div className="pointer-events-none absolute bottom-[-20%] left-0 h-72 w-72 rounded-full bg-emerald-500/15 blur-[120px]" />
+          <div className="relative space-y-8 p-6 animate-in fade-in-50">
+            <div className="overflow-hidden rounded-3xl border border-border/60 bg-background/80 shadow-sm backdrop-blur-sm">
+              <div className="flex flex-col gap-6 p-6 md:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 rounded-full border border-border/60 bg-muted/30 px-4 text-xs uppercase tracking-widest text-muted-foreground transition-all duration-300 hover:-translate-y-0.5 hover:bg-muted/50"
+                    onClick={() => navigate("/assessments")}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to assessments
+                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-2 rounded-full border-border/60 bg-background/70 px-4"
+                      onClick={() => refetchAttempts()}
+                      disabled={attemptsLoading}
+                    >
+                      <RefreshCcw
+                        className={cn(
+                          "h-4 w-4",
+                          attemptsLoading ? "animate-spin" : undefined,
+                        )}
+                      />
+                      Refresh
+                    </Button>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="gap-2 rounded-full bg-primary px-5 py-2 text-primary-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                          <Plus className="h-4 w-4" />
+                          New attempt
+                        </Button>
+                      </DialogTrigger>
+                      {renderDialogContent}
+                    </Dialog>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Attempt command center
+                  </span>
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                      Assessment attempts
+                    </h1>
+                    <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                      Monitor candidate progress, orchestrate new attempts, and keep key deadlines front and center.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1">
+                      <Users className="h-3.5 w-3.5" />
+                      {totalAttempts} total
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1">
+                      <Activity className="h-3.5 w-3.5 text-blue-500" />
+                      {activeAttempts} active
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                      {completedAttempts} completed
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {attemptsLoading ? (
-              <div className="space-y-3 p-6">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-4/5" />
-                <Skeleton className="h-5 w-3/5" />
-              </div>
-            ) : attemptsError ? (
-              <div className="flex items-center justify-between gap-4 border-t border-border/60 px-6 py-8 text-sm text-muted-foreground">
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="h-5 w-5 text-destructive" />
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {summaryCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Card
+                    key={card.key}
+                    className="group relative overflow-hidden border border-border/60 bg-background/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+                  >
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <CardContent className="relative space-y-3 p-5">
+                      <span className={cn("inline-flex h-10 w-10 items-center justify-center rounded-full", card.accent)}>
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">
+                          {card.label}
+                        </p>
+                        <p className="text-2xl font-semibold text-foreground">{card.value}</p>
+                        <p className="text-xs text-muted-foreground">{card.description}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground/80">{card.hint}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <Card className="border border-border/60 bg-background/80 shadow-sm">
+              <CardHeader className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-destructive">
-                      We couldn&apos;t load attempts.
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Check your connection and refresh to try again.
+                    <CardTitle className="text-xl font-semibold">Attempt roster</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Keep your candidate pipeline silky smooth with live status updates.
                     </p>
                   </div>
+                  <Badge variant="outline" className="rounded-full border-border/60 bg-muted/30 px-3 py-1 text-xs uppercase tracking-widest">
+                    Showing {showingCount} / {totalAttempts}
+                  </Badge>
                 </div>
-                <Button variant="outline" onClick={() => refetchAttempts()}>
-                  Retry
-                </Button>
-              </div>
-            ) : filteredAttempts.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 border-t border-dashed border-border/60 py-16 text-center">
-                <Users className="h-8 w-8 text-muted-foreground" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    No attempts match your filters
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Adjust your search or create a fresh attempt to populate
-                    this list.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreateDialogOpen(true)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create attempt
-                </Button>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[220px]">Assessment</TableHead>
-                    <TableHead className="min-w-[200px]">Candidate</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Started</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="min-w-[120px] text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAttempts.map((attempt) => {
-                    const normalizedStatus =
-                      attempt.status?.toLowerCase() ?? "pending";
-                    const statusIntent =
-                      STATUS_INTENTS[normalizedStatus] ??
-                      STATUS_INTENTS.pending;
-                    const label =
-                      STATUS_LABELS[normalizedStatus] ??
-                      attempt.status ??
-                      "Unknown";
-                    const assessmentTitle =
-                      attempt.assessmentId?.title ?? "Untitled assessment";
-                    const candidateName = `${
-                      attempt.userId?.firstName ?? "Unknown"
-                    } ${attempt.userId?.lastName ?? ""}`.trim();
-                    const candidateEmail =
-                      attempt.userId?.emailAddress ?? "No email";
-                    const deadline = attempt.serverDeadline
-                      ? format(
-                          new Date(attempt.serverDeadline),
-                          "MMM d, yyyy h:mm a"
-                        )
-                      : "No deadline";
-                    const lastTouched = attempt.startedAt
-                      ? format(
-                          new Date(attempt.startedAt),
-                          "MMM d, yyyy h:mm a"
-                        )
-                      : "Not started";
-                    const createdAt = attempt.createdAt
-                      ? format(
-                          new Date(attempt.createdAt),
-                          "MMM d, yyyy h:mm a"
-                        )
-                      : "Unknown";
-
-                    return (
-                      <TableRow
-                        key={attempt._id}
-                        className="transition-colors hover:bg-muted/50"
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="relative w-full lg:max-w-sm">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Search by candidate, email, or assessment…"
+                      className="h-11 rounded-full border-border/60 bg-background/90 pl-10"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {statusFilters.map((filter) => (
+                      <Button
+                        key={filter.value}
+                        variant={statusFilter === filter.value ? "default" : "outline"}
+                        className={cn(
+                          "rounded-full border-border/60 px-3 py-1 text-xs",
+                          statusFilter === filter.value
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-background/80 text-muted-foreground hover:bg-muted/30",
+                        )}
+                        onClick={() => setStatusFilter(filter.value)}
                       >
-                        <TableCell className="align-top">
-                          <div className="space-y-1">
-                            <p className="font-medium text-foreground">
-                              {assessmentTitle}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Deadline {deadline}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <div className="space-y-1">
-                            <p className="font-medium text-foreground">
-                              {candidateName}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {candidateEmail}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <div className="space-y-1">
-                            <Badge variant={statusIntent.variant}>
-                              {label}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground">
-                              {statusIntent.copy}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="align-top text-sm text-muted-foreground">
-                          {lastTouched}
-                        </TableCell>
-                        <TableCell className="align-top text-sm text-muted-foreground">
-                          {createdAt}
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-2"
-                              onClick={() =>
-                                navigate(`/assessments/attempts/${attempt._id}`)
-                              }
-                            >
-                              <Eye className="h-4 w-4" />
-                              View
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-2 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteAttempt(attempt._id)}
-                              disabled={deleteAttemptMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Remove
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {filter.label}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      className="rounded-full px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setStatusFilter("all");
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {attemptsLoading ? (
+                  <div className="space-y-3 p-6">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div
+                        key={`attempt-skeleton-${index}`}
+                        className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-muted/20 p-4"
+                      >
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-56" />
+                          <Skeleton className="h-3 w-40" />
+                        </div>
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                      </div>
+                    ))}
+                  </div>
+                ) : attemptsError ? (
+                  <div className="flex flex-col items-center gap-4 border-t border-border/60 px-6 py-16 text-center">
+                    <AlertCircle className="h-8 w-8 text-destructive" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        We couldn&apos;t load attempts.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Check your connection and refresh to try again.
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => refetchAttempts()}>
+                      Retry
+                    </Button>
+                  </div>
+                ) : showingCount === 0 ? (
+                  <div className="flex flex-col items-center gap-4 border-t border-dashed border-border/60 px-6 py-16 text-center">
+                    <Users className="h-10 w-10 text-muted-foreground" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">No attempts match your filters</p>
+                      <p className="text-xs text-muted-foreground">
+                        Adjust your search or create a fresh attempt to populate this list.
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create attempt
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[220px]">Assessment</TableHead>
+                        <TableHead className="min-w-[220px]">Candidate</TableHead>
+                        <TableHead className="min-w-[160px]">Status</TableHead>
+                        <TableHead className="min-w-[220px]">Timeline</TableHead>
+                        <TableHead className="min-w-[150px]">Created</TableHead>
+                        <TableHead className="w-[120px] text-right">Actions</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAttempts.map((attempt) => {
+                        const normalizedStatus = attempt.status?.toLowerCase() ?? "pending";
+                        const statusIntent = STATUS_INTENTS[normalizedStatus] ?? STATUS_INTENTS.pending;
+                        const label = STATUS_LABELS[normalizedStatus] ?? attempt.status ?? "Unknown";
+                        const assessmentTitle = attempt.assessmentId?.title ?? "Untitled assessment";
+                        const candidateName = `${attempt.userId?.firstName ?? "Unknown"} ${attempt.userId?.lastName ?? ""}`.trim();
+                        const candidateEmail = attempt.userId?.emailAddress ?? "No email";
+                        const deadlineAbsolute = attempt.serverDeadline
+                          ? format(new Date(attempt.serverDeadline), "MMM d, yyyy h:mm a")
+                          : null;
+                        const deadlineRelative = attempt.serverDeadline
+                          ? formatDistanceToNow(new Date(attempt.serverDeadline), { addSuffix: true })
+                          : null;
+                        const startedRelative = attempt.startedAt
+                          ? formatDistanceToNow(new Date(attempt.startedAt), { addSuffix: true })
+                          : null;
+                        const createdAbsolute = attempt.createdAt
+                          ? format(new Date(attempt.createdAt), "MMM d, yyyy h:mm a")
+                          : "Unknown";
+                        const createdRelative = attempt.createdAt
+                          ? formatDistanceToNow(new Date(attempt.createdAt), { addSuffix: true })
+                          : null;
+                        const heartbeatRelative = attempt.lastHeartbeatAt
+                          ? formatDistanceToNow(new Date(attempt.lastHeartbeatAt), { addSuffix: true })
+                          : null;
+                        return (
+                          <TableRow key={attempt._id} className="transition-colors hover:bg-muted/40">
+                            <TableCell className="align-top">
+                              <div className="space-y-1">
+                                <p className="font-medium text-foreground">{assessmentTitle}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Deadline {deadlineRelative ?? "—"}
+                                </p>
+                                {deadlineAbsolute && (
+                                  <p className="text-[11px] text-muted-foreground/70">{deadlineAbsolute}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <div className="flex items-start gap-3">
+                                <Avatar className="h-9 w-9 border border-border/60">
+                                  <AvatarFallback className="bg-primary/10 text-xs font-semibold uppercase text-primary">
+                                    {getCandidateInitials(attempt)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="space-y-1">
+                                  <p className="font-medium text-foreground">
+                                    {candidateName || "Unknown candidate"}
+                                  </p>
+                                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Mail className="h-3 w-3" />
+                                    {candidateEmail}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <div className="space-y-1">
+                                <Badge
+                                  variant={statusIntent.variant}
+                                  className="rounded-full px-3 py-1 text-[11px] uppercase tracking-widest"
+                                >
+                                  {label}
+                                </Badge>
+                                <p className="text-xs text-muted-foreground">{statusIntent.copy}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <div className="space-y-1 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1 text-foreground">
+                                  <Clock className="h-3 w-3 text-primary" />
+                                  {startedRelative ? `Started ${startedRelative}` : "Not started yet"}
+                                </div>
+                                <p>Deadline {deadlineRelative ?? "—"}</p>
+                                {heartbeatRelative && (
+                                  <p className="text-[11px] text-muted-foreground/70">
+                                    Heartbeat {heartbeatRelative}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <div className="space-y-1 text-xs text-muted-foreground">
+                                <p className="text-sm text-foreground">{createdAbsolute}</p>
+                                {createdRelative && (
+                                  <p className="text-[11px] text-muted-foreground/70">
+                                    {createdRelative}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="rounded-full border-border/60 bg-background/90 text-foreground"
+                                      onClick={() => navigate(`/assessments/attempts/${attempt._id}`)}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View attempt</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={() => handleDeleteAttempt(attempt._id)}
+                                      disabled={deleteAttemptMutation.isPending}
+                                    >
+                                      {deleteAttemptMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Remove attempt</TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </TooltipProvider>
     </DashboardLayout>
   );
 };
