@@ -1,25 +1,48 @@
-import { useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   AlertCircle,
   ArrowLeft,
+  Bot,
   CalendarClock,
+  ChevronDown,
+  ChevronUp,
   CheckCircle,
+  Clock,
   FileText,
   Loader2,
+  Monitor,
   SearchX,
+  Smartphone,
   Sparkles,
   User,
   XCircle,
+  Activity,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { appService } from "@/lib/api/service";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface Answer {
   questionId: {
@@ -27,7 +50,7 @@ interface Answer {
     prompt: string;
     weight: number;
   };
-  value: any;
+  value: unknown;
   answeredAt: string;
 }
 
@@ -67,9 +90,31 @@ interface AttemptDetail {
   endedAt?: string;
 }
 
+interface EventTracking {
+  _id: string;
+  attemptId: string;
+  assessmentId: string;
+  ts: string;
+  type: string;
+  data: unknown;
+  userAgent: string;
+}
+
+interface EventsResponse {
+  results: EventTracking[];
+  pagination: {
+    totalItems: number;
+    currentPage: number;
+    totalPages: number;
+    pageSize: number;
+  };
+}
+
 const AttemptDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [eventsPage, setEventsPage] = useState(1);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
   const {
     data: attemptData,
@@ -82,7 +127,27 @@ const AttemptDetail = () => {
     enabled: !!id,
   });
 
+  const {
+    data: eventsData,
+    isLoading: eventsLoading,
+    isError: eventsError,
+  } = useQuery({
+    queryKey: ["attempt-events", id, eventsPage],
+    queryFn: () => appService.getAttemptEvents(id!, eventsPage, 10),
+    enabled: !!id,
+  });
+
   const attempt: AttemptDetail | undefined = attemptData?.data;
+  const events: EventsResponse | undefined = eventsData?.data;
+
+  useEffect(() => {
+    setExpandedEventId(null);
+  }, [eventsPage, id]);
+
+  const toggleEventRow = (eventId: string) => {
+    setExpandedEventId((previous) => (previous === eventId ? null : eventId));
+  };
+
   const isHydrated = Boolean(attempt);
   const showSkeleton = isLoading && !isHydrated;
   const showNotFound = !isLoading && !isError && !attempt;
@@ -117,7 +182,8 @@ const AttemptDetail = () => {
               key: "status",
               label: "Current status",
               value: attempt.status,
-              description: statusCopy[statusKey] ?? "Attempt status is being tracked.",
+              description:
+                statusCopy[statusKey] ?? "Attempt status is being tracked.",
               icon: Sparkles,
             },
             {
@@ -130,7 +196,11 @@ const AttemptDetail = () => {
             {
               key: "progress",
               label: "Progress",
-              value: attempt.startedAt ? (attempt.endedAt ? "Completed" : "In progress") : "Not started",
+              value: attempt.startedAt
+                ? attempt.endedAt
+                  ? "Completed"
+                  : "In progress"
+                : "Not started",
               description: attempt.startedAt
                 ? attempt.endedAt
                   ? "Candidate submitted their attempt."
@@ -140,54 +210,236 @@ const AttemptDetail = () => {
             },
           ]
         : [],
-    [attempt, statusKey, statusCopy],
+    [attempt, statusKey, statusCopy]
   );
+
+  const eventStats = useMemo(() => {
+    if (!events?.results || events.results.length === 0) {
+      return null;
+    }
+
+    const typeCounts = events.results.reduce<Record<string, number>>(
+      (acc, current) => {
+        acc[current.type] = (acc[current.type] ?? 0) + 1;
+        return acc;
+      },
+      {}
+    );
+    const sortedByTs = [...events.results].sort(
+      (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime()
+    );
+    const firstEvent = sortedByTs[0];
+    const latestEvent = sortedByTs[sortedByTs.length - 1];
+    const topTypeEntry = Object.entries(typeCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0];
+
+    return {
+      uniqueTypes: Object.keys(typeCounts).length,
+      mostFrequentType: topTypeEntry?.[0],
+      mostFrequentCount: topTypeEntry?.[1],
+      totalItems: events.pagination?.totalItems ?? events.results.length,
+      firstRelative: firstEvent?.ts
+        ? formatDistanceToNow(new Date(firstEvent.ts), { addSuffix: true })
+        : null,
+      lastRelative: latestEvent?.ts
+        ? formatDistanceToNow(new Date(latestEvent.ts), { addSuffix: true })
+        : null,
+    };
+  }, [events?.results, events?.pagination]);
 
   const getStateIcon = (state: boolean) => {
-  return state ? (
-    <CheckCircle className="h-4 w-4 text-green-500" />
-  ) : (
-    <XCircle className="h-4 w-4 text-red-500" />
-  );
-};
+    return state ? (
+      <CheckCircle className="h-4 w-4 text-green-500" />
+    ) : (
+      <XCircle className="h-4 w-4 text-red-500" />
+    );
+  };
 
-const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
-  <div className="space-y-1">
-    <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
-    <p className="text-sm text-foreground">
-      {value ? format(new Date(value), "PPP p") : "—"}
-    </p>
-  </div>
-);
-  
-  const renderValue = (value: any): string => {
+  const TimelineItem = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value?: string;
+  }) => (
+    <div className="space-y-1">
+      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
+      <p className="text-sm text-foreground">
+        {value ? format(new Date(value), "PPP p") : "—"}
+      </p>
+    </div>
+  );
+
+  const renderValue = (value: unknown): string => {
     if (value === null || value === undefined) {
       return "No answer";
     }
-  
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
       return String(value);
     }
-  
+
     if (Array.isArray(value)) {
       if (value.length === 0) {
         return "Empty array";
       }
-  
+
       // Check if it's an array of objects with key/text structure
-      if (value.every(item => typeof item === "object" && item !== null && "key" in item && "text" in item)) {
-        return value.map((item: any) => `${item.key}: ${item.text}`).join(", ");
+      if (
+        value.every(
+          (item): item is { key: string; text: string } =>
+            typeof item === "object" &&
+            item !== null &&
+            "key" in item &&
+            "text" in item &&
+            typeof (item as { key?: unknown }).key === "string" &&
+            typeof (item as { text?: unknown }).text === "string"
+        )
+      ) {
+        return value.map((item) => `${item.key}: ${item.text}`).join(", ");
       }
-  
+
       // Otherwise, stringify the array
       return JSON.stringify(value, null, 2);
     }
-  
+
     if (typeof value === "object") {
       return JSON.stringify(value, null, 2);
     }
-  
+
     return String(value);
+  };
+
+  const getEventSummary = (event: EventTracking): string => {
+    const payload = event.data;
+
+    if (!payload) {
+      return "No payload captured";
+    }
+
+    if (typeof payload === "string") {
+      return payload.length > 80 ? `${payload.slice(0, 77)}…` : payload;
+    }
+
+    if (Array.isArray(payload)) {
+      return `Array payload (${payload.length} item${
+        payload.length === 1 ? "" : "s"
+      })`;
+    }
+
+    if (typeof payload === "object" && payload !== null) {
+      const recordPayload = payload as Record<string, unknown>;
+      const importantKey = [
+        "status",
+        "action",
+        "event",
+        "message",
+        "questionId",
+        "step",
+      ].find((key) => key in recordPayload);
+
+      if (importantKey) {
+        const value = recordPayload[importantKey];
+        if (typeof value === "string") {
+          return `${importantKey}: ${
+            value.length > 60 ? `${value.slice(0, 57)}…` : value
+          }`;
+        }
+        if (typeof value === "number" || typeof value === "boolean") {
+          return `${importantKey}: ${String(value)}`;
+        }
+      }
+
+      const keys = Object.keys(recordPayload);
+      if (keys.length === 0) {
+        return "Empty object payload";
+      }
+
+      return keys
+        .slice(0, 3)
+        .map((key) => {
+          const value = recordPayload[key];
+          if (value === null || value === undefined) {
+            return `${key}: —`;
+          }
+          if (typeof value === "string") {
+            return `${key}: ${
+              value.length > 20 ? `${value.slice(0, 17)}…` : value
+            }`;
+          }
+          if (typeof value === "number" || typeof value === "boolean") {
+            return `${key}: ${String(value)}`;
+          }
+          return `${key}: ${Array.isArray(value) ? "array" : "object"}`;
+        })
+        .join(", ");
+    }
+
+    return "Unsupported payload type";
+  };
+
+  const getUserAgentMeta = (userAgent?: string) => {
+    const normalized = userAgent?.toLowerCase?.() ?? "";
+    let deviceLabel: "Desktop" | "Mobile" | "Tablet" | "Automated" | "Unknown" =
+      "Unknown";
+    let icon: "desktop" | "mobile" | "bot" = "desktop";
+
+    if (!normalized) {
+      deviceLabel = "Unknown";
+      icon = "bot";
+    } else if (/(bot|crawl|spider)/.test(normalized)) {
+      deviceLabel = "Automated";
+      icon = "bot";
+    } else if (/(iphone|android|mobile)/.test(normalized)) {
+      deviceLabel = "Mobile";
+      icon = "mobile";
+    } else if (/(ipad|tablet)/.test(normalized)) {
+      deviceLabel = "Tablet";
+      icon = "mobile";
+    } else {
+      deviceLabel = "Desktop";
+      icon = "desktop";
+    }
+
+    let osLabel = "Unknown OS";
+    if (normalized.includes("windows")) {
+      osLabel = "Windows";
+    } else if (
+      normalized.includes("mac os") ||
+      normalized.includes("macintosh")
+    ) {
+      osLabel = "macOS";
+    } else if (normalized.includes("android")) {
+      osLabel = "Android";
+    } else if (normalized.includes("iphone") || normalized.includes("ios")) {
+      osLabel = "iOS";
+    } else if (normalized.includes("ipad")) {
+      osLabel = "iPadOS";
+    } else if (normalized.includes("linux")) {
+      osLabel = "Linux";
+    }
+
+    const accentClass =
+      icon === "mobile"
+        ? "bg-emerald-500/10 text-emerald-500"
+        : icon === "bot"
+        ? "bg-amber-500/10 text-amber-500"
+        : "bg-primary/10 text-primary";
+
+    return {
+      deviceLabel,
+      osLabel,
+      icon,
+      accentClass,
+      raw: userAgent ?? "—",
+    };
   };
 
   if (isError) {
@@ -199,7 +451,9 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-destructive/20">
                 <AlertCircle className="h-6 w-6" />
               </span>
-              <CardTitle className="text-2xl">We couldn&apos;t load this attempt</CardTitle>
+              <CardTitle className="text-2xl">
+                We couldn&apos;t load this attempt
+              </CardTitle>
               <p className="text-sm text-destructive/80">
                 Please check the link and try refreshing the page.
               </p>
@@ -208,7 +462,11 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
               <Button variant="destructive" onClick={() => refetch()}>
                 Retry loading
               </Button>
-              <Button variant="ghost" className="text-destructive" onClick={() => navigate("/assessments/attempts")}>
+              <Button
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => navigate("/assessments/attempts")}
+              >
                 Back to attempts
               </Button>
             </CardContent>
@@ -229,14 +487,20 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
               </span>
               <CardTitle className="text-2xl">Attempt not found</CardTitle>
               <p className="text-sm text-muted-foreground">
-                We couldn&apos;t find an attempt that matches this link. It may have been removed or never existed.
+                We couldn&apos;t find an attempt that matches this link. It may
+                have been removed or never existed.
               </p>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center justify-center gap-3">
-              <Button variant="outline" onClick={() => navigate("/assessments/attempts")}>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/assessments/attempts")}
+              >
                 View attempts
               </Button>
-              <Button onClick={() => navigate("/assessments")}>Go to assessments</Button>
+              <Button onClick={() => navigate("/assessments")}>
+                Go to assessments
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -257,7 +521,10 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {Array.from({ length: 3 }).map((_, idx) => (
-              <Card key={`summary-skeleton-${idx}`} className="overflow-hidden border border-border/60 bg-muted/20 dark:bg-muted/10">
+              <Card
+                key={`summary-skeleton-${idx}`}
+                className="overflow-hidden border border-border/60 bg-muted/20 dark:bg-muted/10"
+              >
                 <div className="pointer-events-none absolute inset-y-0 -left-full w-1/2 bg-gradient-to-r from-transparent via-primary/10 to-transparent animate-[shimmer_2s_linear_infinite]" />
                 <CardContent className="space-y-3 p-4">
                   <Skeleton className="h-3 w-24" />
@@ -269,7 +536,10 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, idx) => (
-              <Card key={`info-skeleton-${idx}`} className="border border-border/60 bg-muted/20 dark:bg-muted/10">
+              <Card
+                key={`info-skeleton-${idx}`}
+                className="border border-border/60 bg-muted/20 dark:bg-muted/10"
+              >
                 <CardContent className="space-y-3 p-4">
                   <Skeleton className="h-5 w-24" />
                   <Skeleton className="h-4 w-40" />
@@ -298,246 +568,697 @@ const TimelineItem = ({ label, value }: { label: string; value?: string }) => (
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 p-6 animate-in fade-in-50">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <Button variant="ghost" size="sm" className="w-fit gap-2" onClick={() => navigate("/assessments/attempts")}>
-              <ArrowLeft className="h-4 w-4" />
-              Back to attempts
-            </Button>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-semibold tracking-tight">Attempt details</h1>
-              <p className="text-sm text-muted-foreground">
-                Attempt ID: <span className="font-mono text-foreground/80">{attempt._id}</span>
-              </p>
+      <div className="relative">
+        <div className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-primary/15 blur-[120px]" />
+        <div className="pointer-events-none absolute bottom-[-18%] left-0 h-72 w-72 rounded-full bg-emerald-500/15 blur-[120px]" />
+        <div className="relative space-y-8 p-6 animate-in fade-in-50">
+          <div className="overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-background via-primary/5 to-background p-6 shadow-sm backdrop-blur-sm">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                  Attempt insights
+                </div>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-semibold tracking-tight lg:text-4xl">
+                    Attempt details
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Attempt ID:{" "}
+                    <span className="font-mono text-foreground/80">
+                      {attempt._id}
+                    </span>
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-fit gap-2 rounded-full border-primary/30 bg-background/70 backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/10"
+                  onClick={() => navigate("/assessments/attempts")}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to attempts
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-end">
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    variant={getStatusBadgeVariant(attempt.status)}
+                    className="rounded-full border border-primary/30 px-3 py-1 text-xs uppercase tracking-widest"
+                  >
+                    {attempt.status}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="rounded-full px-3 py-1 text-xs uppercase tracking-widest"
+                  >
+                    {attempt.state.isStarted ? "Started" : "Not started"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground/80 sm:text-right">
+                  Stay close to the candidate journey with live signals.
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={getStatusBadgeVariant(attempt.status)}>
-              {attempt.status}
-            </Badge>
-            <Badge variant="outline">{attempt.state.isStarted ? "Started" : "Not started"}</Badge>
-          </div>
-        </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {cardsToRender.map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <Card
-                key={card.key}
-                className="border border-border/60 bg-muted/20 shadow-sm transition-transform duration-300 hover:-translate-y-1 dark:bg-muted/10"
-                style={{ animationDelay: `${idx * 80}ms` }}
-              >
-                <CardContent className="flex items-start justify-between gap-4 p-4">
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                      {card.label}
-                    </p>
-                    <p className="text-xl font-semibold text-foreground">{card.value}</p>
-                    <p className="text-xs text-muted-foreground">{card.description}</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {cardsToRender.map((card, idx) => {
+              const Icon = card.icon;
+              return (
+                <Card
+                  key={card.key}
+                  className="group relative overflow-hidden border border-border/50 bg-background/80 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-lg dark:bg-muted/20"
+                  style={{ animationDelay: `${idx * 80}ms` }}
+                >
+                  <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <div className="absolute -top-12 right-0 h-32 w-32 rounded-full bg-primary/20 blur-2xl" />
                   </div>
-                  <span className="rounded-full border border-border/60 bg-background p-2 shadow-sm">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </span>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  <CardContent className="relative flex items-start justify-between gap-4 p-5">
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">
+                        {card.label}
+                      </p>
+                      <p className="text-xl font-semibold text-foreground">
+                        {card.value}
+                      </p>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        {card.description}
+                      </p>
+                    </div>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Assessment
-              </CardTitle>
-              <Badge variant="outline" className="font-mono text-xs text-muted-foreground">
-                {attempt.assessmentId._id.slice(0, 8)}...{attempt.assessmentId._id.slice(-4)}
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Title</p>
-                <p className="text-sm text-foreground">{attempt.assessmentId.title}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Description</p>
-                <p className="text-sm text-muted-foreground">
-                  {attempt.assessmentId.description || "No description provided."}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Time limit</p>
-                <p className="flex items-center gap-2 text-sm text-foreground">
-                  <CalendarClock className="h-4 w-4 text-primary" />
-                  {attempt.assessmentId.timeLimitSec} seconds
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Candidate
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Name</p>
-                <p className="text-sm text-foreground">
-                  {attempt.userId.firstName} {attempt.userId.lastName}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Email</p>
-                <p className="text-sm text-muted-foreground">{attempt.userId.emailAddress}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Phone</p>
-                <p className="text-sm text-muted-foreground">{attempt.userId.mobileNumber || "—"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Joined</p>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(attempt.userId.createdAt), "PPP p")}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Status & state</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Status</p>
-                <div className="flex items-center gap-2">
-                  <Badge variant={getStatusBadgeVariant(attempt.status)}>{attempt.status}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {statusCopy[statusKey] ?? "Status information is unavailable."}
-                  </span>
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Assessment
+                </CardTitle>
+                <Badge
+                  variant="outline"
+                  className="font-mono text-xs text-muted-foreground"
+                >
+                  {attempt.assessmentId._id.slice(0, 8)}...
+                  {attempt.assessmentId._id.slice(-4)}
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Title
+                  </p>
+                  <p className="text-sm text-foreground">
+                    {attempt.assessmentId.title}
+                  </p>
                 </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Description
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {attempt.assessmentId.description ||
+                      "No description provided."}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Time limit
+                  </p>
+                  <p className="flex items-center gap-2 text-sm text-foreground">
+                    <CalendarClock className="h-4 w-4 text-primary" />
+                    {attempt.assessmentId.timeLimitSec} seconds
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  Candidate
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Name
+                  </p>
+                  <p className="text-sm text-foreground">
+                    {attempt.userId.firstName} {attempt.userId.lastName}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Email
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {attempt.userId.emailAddress}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Phone
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {attempt.userId.mobileNumber || "—"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Joined
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(attempt.userId.createdAt), "PPP p")}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Status & state</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Status
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getStatusBadgeVariant(attempt.status)}>
+                      {attempt.status}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {statusCopy[statusKey] ??
+                        "Status information is unavailable."}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    State flags
+                  </p>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    {Object.entries(attempt.state).map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/30 px-3 py-1 capitalize dark:bg-muted/20"
+                      >
+                        {getStateIcon(value)}
+                        {key.replace(/([A-Z])/g, " $1")}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
+            <CardHeader>
+              <CardTitle>Timeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <TimelineItem label="Created" value={attempt.createdAt} />
+                <TimelineItem label="Started" value={attempt.startedAt} />
+                <TimelineItem label="Ended" value={attempt.endedAt} />
+                <TimelineItem
+                  label="Last heartbeat"
+                  value={attempt.lastHeartbeatAt}
+                />
+                <TimelineItem
+                  label="Server deadline"
+                  value={attempt.serverDeadline}
+                />
+                <TimelineItem
+                  label="Lease expires"
+                  value={attempt.leaseExpiresAt}
+                />
+                <TimelineItem label="Updated" value={attempt.updatedAt} />
               </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase text-muted-foreground">State flags</p>
-                <div className="flex flex-wrap gap-3 text-xs">
-                  {Object.entries(attempt.state).map(([key, value]) => (
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Answers ({attempt.answers.length})</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {attempt.answers.length > 0
+                  ? "Review each response and its submission timestamp."
+                  : "No answers have been submitted yet."}
+              </span>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {attempt.answers.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+                  No answers submitted yet.
+                </div>
+              ) : (
+                attempt.answers.map((answer, index) => (
+                  <Card
+                    key={`${answer.questionId.prompt}-${index}`}
+                    className="border border-border/60 bg-background/70 shadow-sm transition-transform duration-200 hover:-translate-y-1 dark:bg-muted/10"
+                  >
+                    <CardContent className="space-y-4 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant="secondary"
+                            className="rounded-full px-3 py-1 text-xs"
+                          >
+                            Question {index + 1}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(answer.answeredAt), "PPP p")}
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          Weight {answer.questionId.weight}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">
+                          {answer.questionId.prompt}
+                        </p>
+                        <div className="flex gap-3 text-xs text-muted-foreground">
+                          <span className="uppercase tracking-widest">
+                            Type: {answer.questionId.type}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium uppercase text-muted-foreground">
+                          Answer
+                        </p>
+                        <div className="rounded-md border border-border/70 bg-muted/20 p-3 font-mono text-sm text-foreground whitespace-pre-wrap dark:bg-muted/10">
+                          {renderValue(answer.value)}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="group relative overflow-hidden border border-border/60 bg-card/95 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:bg-muted/10">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/30 via-transparent to-primary/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                Event tracking ({events?.pagination?.totalItems || 0})
+              </CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {events?.results?.length
+                  ? "Monitor candidate activity and system events."
+                  : "No events recorded yet."}
+              </span>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {eventsLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 4 }).map((_, idx) => (
                     <div
-                      key={key}
-                      className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/30 px-3 py-1 capitalize dark:bg-muted/20"
+                      key={`event-skeleton-${idx}`}
+                      className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/20 p-3"
                     >
-                      {getStateIcon(value)}
-                      {key.replace(/([A-Z])/g, " $1")}
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                      <Skeleton className="h-4 w-12" />
                     </div>
                   ))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
-          <CardHeader>
-            <CardTitle>Timeline</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <TimelineItem label="Created" value={attempt.createdAt} />
-              <TimelineItem label="Started" value={attempt.startedAt} />
-              <TimelineItem label="Ended" value={attempt.endedAt} />
-              <TimelineItem label="Last heartbeat" value={attempt.lastHeartbeatAt} />
-              <TimelineItem label="Server deadline" value={attempt.serverDeadline} />
-              <TimelineItem label="Lease expires" value={attempt.leaseExpiresAt} />
-              <TimelineItem label="Updated" value={attempt.updatedAt} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Answers ({attempt.answers.length})</CardTitle>
-            <span className="text-xs text-muted-foreground">
-              {attempt.answers.length > 0
-                ? "Review each response and its submission timestamp."
-                : "No answers have been submitted yet."}
-            </span>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {attempt.answers.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-                No answers submitted yet.
-              </div>
-            ) : (
-              attempt.answers.map((answer, index) => (
-                <Card
-                  key={`${answer.questionId.prompt}-${index}`}
-                  className="border border-border/60 bg-background/70 shadow-sm transition-transform duration-200 hover:-translate-y-1 dark:bg-muted/10"
-                >
-                  <CardContent className="space-y-4 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+              ) : eventsError ? (
+                <div className="flex items-center justify-between gap-4 border-t border-border/60 px-6 py-8 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <div>
+                      <p className="font-medium text-destructive">
+                        We couldn't load events.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Check your connection and refresh to try again.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : events?.results?.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+                  No events recorded yet.
+                </div>
+              ) : (
+                <>
+                  {eventStats && (
+                    <div className="grid gap-3 rounded-2xl border border-border/60 bg-muted/20 p-4 text-xs text-muted-foreground/80 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="flex items-center gap-3">
-                        <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                          Question {index + 1}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(answer.answeredAt), "PPP p")}
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Sparkles className="h-4 w-4" />
                         </span>
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                            Unique types
+                          </p>
+                          <p className="text-sm font-medium text-foreground">
+                            {eventStats.uniqueTypes}
+                          </p>
+                        </div>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        Weight {answer.questionId.weight}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-foreground">{answer.questionId.prompt}</p>
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span className="uppercase tracking-widest">Type: {answer.questionId.type}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                          <Activity className="h-4 w-4" />
+                        </span>
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                            Most frequent
+                          </p>
+                          <p className="text-sm font-medium text-foreground">
+                            {eventStats.mostFrequentType ?? "—"} ·{" "}
+                            {eventStats.mostFrequentCount ?? 0}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+                          <Clock className="h-4 w-4" />
+                        </span>
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                            Latest event
+                          </p>
+                          <p className="text-sm font-medium text-foreground">
+                            {eventStats.lastRelative ?? "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+                          <CalendarClock className="h-4 w-4" />
+                        </span>
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                            First event
+                          </p>
+                          <p className="text-sm font-medium text-foreground">
+                            {eventStats.firstRelative ?? "—"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium uppercase text-muted-foreground">Answer</p>
-                      <div className="rounded-md border border-border/70 bg-muted/20 p-3 font-mono text-sm text-foreground whitespace-pre-wrap dark:bg-muted/10">
-                        {renderValue(answer.value)}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                  )}
+                  <TooltipProvider delayDuration={120}>
+                    <div className="max-h-[26rem] overflow-x-hidden no-scrollbar rounded-2xl border border-border/60">
+                      <Table className="relative">
+                        <div className="relative">
+                          {/* <div className="fixed right-5 overflow-hidden rounded-2xl left-5"> */}
+                            <TableHeader className="">
+                              <TableRow className="bg-muted/40">
+                                <TableHead className="min-w-[160px]">
+                                  Timestamp
+                                </TableHead>
+                                <TableHead className="min-w-[130px]">
+                                  Type
+                                </TableHead>
+                                <TableHead className="min-w-[220px]">
+                                  Summary
+                                </TableHead>
+                                <TableHead className="min-w-[500px]">
+                                  Client
+                                </TableHead>
+                                <TableHead className="w-12 text-right">
+                                  Details
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                          {/* </div> */}
 
-        {(attempt.lockId || attempt.leaseExpiresAt) && (
-          <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
-            <CardHeader>
-              <CardTitle>Technical details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {attempt.lockId && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase text-muted-foreground">Lock ID</p>
-                    <p className="rounded-md border border-border/70 bg-muted/20 p-2 font-mono text-xs text-muted-foreground dark:bg-muted/10">
-                      {attempt.lockId.slice(0, 50)}...{attempt.lockId.slice(-8)}
-                    </p>
-                  </div>
-                )}
-                {attempt.leaseExpiresAt && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase text-muted-foreground">Lease expires</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(attempt.leaseExpiresAt), "PPP p")}
-                    </p>
-                  </div>
-                )}
-              </div>
+                          {/* <div className="max-h-[26rem] overflow-y-scroll border border-border/60"> */}
+                        </div>
+
+                        <div className="mt-1">
+                          <TableBody className="w-full">
+                            {events?.results?.map((event) => {
+                              const isExpanded = expandedEventId === event._id;
+                              const summary = getEventSummary(event);
+                              const relativeTs = formatDistanceToNow(
+                                new Date(event.ts),
+                                { addSuffix: true }
+                              );
+                              const meta = getUserAgentMeta(event.userAgent);
+                              const DeviceIcon =
+                                meta.icon === "mobile"
+                                  ? Smartphone
+                                  : meta.icon === "bot"
+                                  ? Bot
+                                  : Monitor;
+                              return (
+                                <Fragment key={event._id}>
+                                  <TableRow
+                                    onClick={() => toggleEventRow(event._id)}
+                                    className={cn(
+                                      "group cursor-pointer border-l-2 border-transparent transition-all duration-300",
+                                      isExpanded
+                                        ? "border-primary bg-primary/5 shadow-sm"
+                                        : "hover:border-primary/40 hover:bg-muted/40"
+                                    )}
+                                  >
+                                    <TableCell className="align-top">
+                                      <div className="space-y-1">
+                                        <p className="text-sm font-medium text-foreground">
+                                          {format(
+                                            new Date(event.ts),
+                                            "MMM d, yyyy h:mm:ss a"
+                                          )}
+                                        </p>
+                                        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                          <Clock className="h-3 w-3" />
+                                          {relativeTs}
+                                        </p>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="align-top">
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          "rounded-full border border-border/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest",
+                                          isExpanded
+                                            ? "border-primary/50 text-primary"
+                                            : "text-muted-foreground"
+                                        )}
+                                      >
+                                        {event.type}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="align-top">
+                                      <div className="space-y-1 text-sm text-foreground">
+                                        <p>{summary}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          Tap to{" "}
+                                          {isExpanded ? "collapse" : "expand"}{" "}
+                                          full payload.
+                                        </p>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="align-top">
+                                      <div className="space-y-2 text-xs text-muted-foreground">
+                                        <div className="flex items-center gap-2 text-foreground">
+                                          <span
+                                            className={cn(
+                                              "flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-muted/40",
+                                              meta.accentClass
+                                            )}
+                                          >
+                                            <DeviceIcon className="h-4 w-4" />
+                                          </span>
+                                          <div>
+                                            <p className="text-sm font-medium text-foreground">
+                                              {meta.deviceLabel}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {meta.osLabel}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <p className="break-words text-xs text-muted-foreground/80">
+                                          {meta.raw}
+                                        </p>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="align-top text-right">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-expanded={isExpanded}
+                                        aria-label={
+                                          isExpanded
+                                            ? "Collapse event details"
+                                            : "Expand event details"
+                                        }
+                                        onClick={(buttonEvent) => {
+                                          buttonEvent.stopPropagation();
+                                          toggleEventRow(event._id);
+                                        }}
+                                        className="rounded-full transition-transform duration-300 hover:bg-primary/10"
+                                      >
+                                        {isExpanded ? (
+                                          <ChevronUp className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronDown className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                  {isExpanded && (
+                                    <TableRow className="bg-muted/30">
+                                      <TableCell colSpan={5}>
+                                        <div className="grid gap-6 md:grid-cols-2">
+                                          <div className="space-y-2">
+                                            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                              Event payload
+                                            </p>
+                                            <ScrollArea className="max-h-48 rounded-2xl border border-border/60 bg-background/90">
+                                              <pre className="whitespace-pre-wrap break-words p-4 text-xs font-mono leading-relaxed text-foreground">
+                                                {JSON.stringify(
+                                                  event.data,
+                                                  null,
+                                                  2
+                                                )}
+                                              </pre>
+                                            </ScrollArea>
+                                          </div>
+                                          <div className="space-y-4">
+                                            <div className="space-y-2">
+                                              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                                Identifiers
+                                              </p>
+                                              <div className="grid gap-2 text-xs text-muted-foreground">
+                                                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-3 py-2 font-mono text-[11px] text-foreground">
+                                                  <span>Attempt</span>
+                                                  <span className="truncate">
+                                                    {event.attemptId}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-3 py-2 font-mono text-[11px] text-foreground">
+                                                  <span>Assessment</span>
+                                                  <span className="truncate">
+                                                    {event.assessmentId}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                                Client fingerprint
+                                              </p>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <div className="cursor-help rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground transition hover:bg-muted/30">
+                                                    Hover to view full user
+                                                    agent
+                                                  </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="max-w-sm whitespace-pre-wrap break-words text-xs leading-relaxed">
+                                                  {meta.raw}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </Fragment>
+                              );
+                            })}
+                          </TableBody>
+                        </div>
+
+                        {/* </div> */}
+                      </Table>
+                    </div>
+                  </TooltipProvider>
+                  {events?.pagination && events.pagination.totalPages > 1 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        Page {events.pagination.currentPage} of{" "}
+                        {events.pagination.totalPages} (
+                        {events.pagination.totalItems} total events)
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setEventsPage((prev) => Math.max(1, prev - 1))
+                          }
+                          disabled={eventsPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setEventsPage((prev) =>
+                              Math.min(events.pagination.totalPages, prev + 1)
+                            )
+                          }
+                          disabled={eventsPage === events.pagination.totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
-        )}
+
+          {(attempt.lockId || attempt.leaseExpiresAt) && (
+            <Card className="border border-border/60 bg-card shadow-sm dark:bg-muted/10">
+              <CardHeader>
+                <CardTitle>Technical details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {attempt.lockId && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        Lock ID
+                      </p>
+                      <p className="rounded-md border border-border/70 bg-muted/20 p-2 font-mono text-xs text-muted-foreground dark:bg-muted/10">
+                        {attempt.lockId.slice(0, 50)}...
+                        {attempt.lockId.slice(-8)}
+                      </p>
+                    </div>
+                  )}
+                  {attempt.leaseExpiresAt && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase text-muted-foreground">
+                        Lease expires
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(attempt.leaseExpiresAt), "PPP p")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );
