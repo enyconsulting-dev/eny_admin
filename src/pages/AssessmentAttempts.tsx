@@ -52,7 +52,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { appService } from "@/lib/api/service";
 import {
@@ -345,7 +350,9 @@ const AssessmentAttempts = () => {
       description: "All tracked attempts across assessments.",
       icon: Sparkles,
       accent: "bg-primary/10 text-primary",
-      hint: lastCreatedRelative ? `Latest ${lastCreatedRelative}` : "No attempts recorded yet",
+      hint: lastCreatedRelative
+        ? `Latest ${lastCreatedRelative}`
+        : "No attempts recorded yet",
     },
     {
       key: "active",
@@ -354,7 +361,9 @@ const AssessmentAttempts = () => {
       description: "Candidates currently progressing through assessments.",
       icon: Activity,
       accent: "bg-blue-500/10 text-blue-500",
-      hint: nextDeadlineRelative ? `Next deadline ${nextDeadlineRelative}` : "No upcoming deadlines",
+      hint: nextDeadlineRelative
+        ? `Next deadline ${nextDeadlineRelative}`
+        : "No upcoming deadlines",
     },
     {
       key: "upcoming",
@@ -363,7 +372,9 @@ const AssessmentAttempts = () => {
       description: "Attempts expiring within 24 hours.",
       icon: CalendarClock,
       accent: "bg-amber-500/10 text-amber-500",
-      hint: nextDeadlineRelative ? `Earliest ${nextDeadlineRelative}` : "All deadlines clear",
+      hint: nextDeadlineRelative
+        ? `Earliest ${nextDeadlineRelative}`
+        : "All deadlines clear",
     },
     {
       key: "completed",
@@ -411,7 +422,8 @@ const AssessmentAttempts = () => {
             Launch a candidate attempt
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Choose the assessment experience and candidate. Attempts activate instantly.
+            Choose the assessment experience and candidate. Attempts activate
+            instantly.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-5">
@@ -450,16 +462,25 @@ const AssessmentAttempts = () => {
                 <Command>
                   <CommandInput
                     disabled={usersLoading}
-                    placeholder={usersLoading ? "Loading candidates…" : "Search by name or email…"}
+                    placeholder={
+                      usersLoading
+                        ? "Loading candidates…"
+                        : "Search by name or email…"
+                    }
                     className="h-11 border-b border-border/60 text-sm"
                   />
                   <CommandList className="max-h-56">
                     <CommandEmpty className="py-6 text-sm text-muted-foreground">
-                      {usersLoading ? "Fetching candidates…" : "No candidates found."}
+                      {usersLoading
+                        ? "Fetching candidates…"
+                        : "No candidates found."}
                     </CommandEmpty>
                     <CommandGroup className="max-h-56 overflow-y-auto">
                       {users.map((user: any) => {
-                        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Unnamed candidate";
+                        const fullName =
+                          `${user.firstName ?? ""} ${
+                            user.lastName ?? ""
+                          }`.trim() || "Unnamed candidate";
                         const isSelected = selectedUser === user._id;
                         return (
                           <CommandItem
@@ -469,11 +490,18 @@ const AssessmentAttempts = () => {
                             onSelect={() => setSelectedUser(user._id)}
                           >
                             <div className="flex flex-col">
-                              <span className="font-medium text-foreground">{fullName}</span>
-                              <span className="text-xs text-muted-foreground">{user.emailAddress}</span>
+                              <span className="font-medium text-foreground">
+                                {fullName}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {user.emailAddress}
+                              </span>
                             </div>
                             {isSelected && (
-                              <Badge variant="outline" className="ml-auto rounded-full text-[11px] uppercase tracking-widest">
+                              <Badge
+                                variant="outline"
+                                className="ml-auto rounded-full text-[11px] uppercase tracking-widest"
+                              >
                                 Selected
                               </Badge>
                             )}
@@ -501,12 +529,18 @@ const AssessmentAttempts = () => {
               <Command>
                 <CommandInput
                   disabled={assessmentsLoading}
-                  placeholder={assessmentsLoading ? "Loading assessments…" : "Search assessments…"}
+                  placeholder={
+                    assessmentsLoading
+                      ? "Loading assessments…"
+                      : "Search assessments…"
+                  }
                   className="h-11 border-b border-border/60 text-sm"
                 />
                 <CommandList className="max-h-56">
                   <CommandEmpty className="py-6 text-sm text-muted-foreground">
-                    {assessmentsLoading ? "Fetching assessments…" : "No assessments found."}
+                    {assessmentsLoading
+                      ? "Fetching assessments…"
+                      : "No assessments found."}
                   </CommandEmpty>
                   <CommandGroup className="max-h-56 overflow-y-auto">
                     {assessments.map((assessment: any) => {
@@ -517,7 +551,9 @@ const AssessmentAttempts = () => {
                       return (
                         <CommandItem
                           key={assessment._id}
-                          value={`${assessment.title} ${assessment.description ?? ""}`}
+                          value={`${assessment.title} ${
+                            assessment.description ?? ""
+                          }`}
                           className="flex items-center gap-3 px-3 py-2 text-sm"
                           onSelect={() => {
                             if (attemptMode === "single") {
@@ -526,13 +562,15 @@ const AssessmentAttempts = () => {
                               setSelectedAssessments((prev) =>
                                 prev.includes(assessment._id)
                                   ? prev.filter((id) => id !== assessment._id)
-                                  : [...prev, assessment._id],
+                                  : [...prev, assessment._id]
                               );
                             }
                           }}
                         >
                           <div className="flex flex-col">
-                            <span className="font-medium text-foreground">{assessment.title}</span>
+                            <span className="font-medium text-foreground">
+                              {assessment.title}
+                            </span>
                             {assessment.description && (
                               <span className="text-xs text-muted-foreground line-clamp-1">
                                 {assessment.description}
@@ -540,7 +578,10 @@ const AssessmentAttempts = () => {
                             )}
                           </div>
                           {isSelected && (
-                            <Badge variant="outline" className="ml-auto rounded-full text-[11px] uppercase tracking-widest">
+                            <Badge
+                              variant="outline"
+                              className="ml-auto rounded-full text-[11px] uppercase tracking-widest"
+                            >
                               Selected
                             </Badge>
                           )}
@@ -561,7 +602,9 @@ const AssessmentAttempts = () => {
             {attemptMode === "multi" && selectedAssessments.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {selectedAssessments.map((assessmentId) => {
-                  const assessment = assessments.find((item: any) => item._id === assessmentId);
+                  const assessment = assessments.find(
+                    (item: any) => item._id === assessmentId
+                  );
                   return (
                     <Badge
                       key={assessmentId}
@@ -633,12 +676,15 @@ const AssessmentAttempts = () => {
                       <RefreshCcw
                         className={cn(
                           "h-4 w-4",
-                          attemptsLoading ? "animate-spin" : undefined,
+                          attemptsLoading ? "animate-spin" : undefined
                         )}
                       />
                       Refresh
                     </Button>
-                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <Dialog
+                      open={isCreateDialogOpen}
+                      onOpenChange={setIsCreateDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button className="gap-2 rounded-full bg-primary px-5 py-2 text-primary-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
                           <Plus className="h-4 w-4" />
@@ -659,7 +705,8 @@ const AssessmentAttempts = () => {
                       Assessment attempts
                     </h1>
                     <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                      Monitor candidate progress, orchestrate new attempts, and keep key deadlines front and center.
+                      Monitor candidate progress, orchestrate new attempts, and
+                      keep key deadlines front and center.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -690,17 +737,28 @@ const AssessmentAttempts = () => {
                   >
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <CardContent className="relative space-y-3 p-5">
-                      <span className={cn("inline-flex h-10 w-10 items-center justify-center rounded-full", card.accent)}>
+                      <span
+                        className={cn(
+                          "inline-flex h-10 w-10 items-center justify-center rounded-full",
+                          card.accent
+                        )}
+                      >
                         <Icon className="h-5 w-5" />
                       </span>
                       <div className="space-y-1">
                         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">
                           {card.label}
                         </p>
-                        <p className="text-2xl font-semibold text-foreground">{card.value}</p>
-                        <p className="text-xs text-muted-foreground">{card.description}</p>
+                        <p className="text-2xl font-semibold text-foreground">
+                          {card.value}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {card.description}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground/80">{card.hint}</p>
+                      <p className="text-xs text-muted-foreground/80">
+                        {card.hint}
+                      </p>
                     </CardContent>
                   </Card>
                 );
@@ -711,12 +769,18 @@ const AssessmentAttempts = () => {
               <CardHeader className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <CardTitle className="text-xl font-semibold">Attempt roster</CardTitle>
+                    <CardTitle className="text-xl font-semibold">
+                      Attempt roster
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      Keep your candidate pipeline silky smooth with live status updates.
+                      Keep your candidate pipeline silky smooth with live status
+                      updates.
                     </p>
                   </div>
-                  <Badge variant="outline" className="rounded-full border-border/60 bg-muted/30 px-3 py-1 text-xs uppercase tracking-widest">
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-border/60 bg-muted/30 px-3 py-1 text-xs uppercase tracking-widest"
+                  >
                     Showing {showingCount} / {totalAttempts}
                   </Badge>
                 </div>
@@ -734,12 +798,14 @@ const AssessmentAttempts = () => {
                     {statusFilters.map((filter) => (
                       <Button
                         key={filter.value}
-                        variant={statusFilter === filter.value ? "default" : "outline"}
+                        variant={
+                          statusFilter === filter.value ? "default" : "outline"
+                        }
                         className={cn(
                           "rounded-full border-border/60 px-3 py-1 text-xs",
                           statusFilter === filter.value
                             ? "bg-primary text-primary-foreground shadow-sm"
-                            : "bg-background/80 text-muted-foreground hover:bg-muted/30",
+                            : "bg-background/80 text-muted-foreground hover:bg-muted/30"
                         )}
                         onClick={() => setStatusFilter(filter.value)}
                       >
@@ -794,161 +860,232 @@ const AssessmentAttempts = () => {
                   <div className="flex flex-col items-center gap-4 border-t border-dashed border-border/60 px-6 py-16 text-center">
                     <Users className="h-10 w-10 text-muted-foreground" />
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-foreground">No attempts match your filters</p>
+                      <p className="text-sm font-medium text-foreground">
+                        No attempts match your filters
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        Adjust your search or create a fresh attempt to populate this list.
+                        Adjust your search or create a fresh attempt to populate
+                        this list.
                       </p>
                     </div>
-                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateDialogOpen(true)}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Create attempt
                     </Button>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[220px]">Assessment</TableHead>
-                        <TableHead className="min-w-[220px]">Candidate</TableHead>
-                        <TableHead className="min-w-[160px]">Status</TableHead>
-                        <TableHead className="min-w-[220px]">Timeline</TableHead>
-                        <TableHead className="min-w-[150px]">Created</TableHead>
-                        <TableHead className="w-[120px] text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAttempts.map((attempt) => {
-                        const normalizedStatus = attempt.status?.toLowerCase() ?? "pending";
-                        const statusIntent = STATUS_INTENTS[normalizedStatus] ?? STATUS_INTENTS.pending;
-                        const label = STATUS_LABELS[normalizedStatus] ?? attempt.status ?? "Unknown";
-                        const assessmentTitle = attempt.assessmentId?.title ?? "Untitled assessment";
-                        const candidateName = `${attempt.userId?.firstName ?? "Unknown"} ${attempt.userId?.lastName ?? ""}`.trim();
-                        const candidateEmail = attempt.userId?.emailAddress ?? "No email";
-                        const deadlineAbsolute = attempt.serverDeadline
-                          ? format(new Date(attempt.serverDeadline), "MMM d, yyyy h:mm a")
-                          : null;
-                        const deadlineRelative = attempt.serverDeadline
-                          ? formatDistanceToNow(new Date(attempt.serverDeadline), { addSuffix: true })
-                          : null;
-                        const startedRelative = attempt.startedAt
-                          ? formatDistanceToNow(new Date(attempt.startedAt), { addSuffix: true })
-                          : null;
-                        const createdAbsolute = attempt.createdAt
-                          ? format(new Date(attempt.createdAt), "MMM d, yyyy h:mm a")
-                          : "Unknown";
-                        const createdRelative = attempt.createdAt
-                          ? formatDistanceToNow(new Date(attempt.createdAt), { addSuffix: true })
-                          : null;
-                        const heartbeatRelative = attempt.lastHeartbeatAt
-                          ? formatDistanceToNow(new Date(attempt.lastHeartbeatAt), { addSuffix: true })
-                          : null;
-                        return (
-                          <TableRow key={attempt._id} className="transition-colors hover:bg-muted/40">
-                            <TableCell className="align-top">
-                              <div className="space-y-1">
-                                <p className="font-medium text-foreground">{assessmentTitle}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Deadline {deadlineRelative ?? "—"}
-                                </p>
-                                {deadlineAbsolute && (
-                                  <p className="text-[11px] text-muted-foreground/70">{deadlineAbsolute}</p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="flex items-start gap-3">
-                                <Avatar className="h-9 w-9 border border-border/60">
-                                  <AvatarFallback className="bg-primary/10 text-xs font-semibold uppercase text-primary">
-                                    {getCandidateInitials(attempt)}
-                                  </AvatarFallback>
-                                </Avatar>
+                  <div className="overflow-y-scroll h-[40vh] no-scrollbar">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[220px]">
+                            Assessment
+                          </TableHead>
+                          <TableHead className="min-w-[220px]">
+                            Candidate
+                          </TableHead>
+                          <TableHead className="min-w-[160px]">
+                            Status
+                          </TableHead>
+                          <TableHead className="min-w-[220px]">
+                            Timeline
+                          </TableHead>
+                          <TableHead className="min-w-[150px]">
+                            Created
+                          </TableHead>
+                          <TableHead className="w-[120px] text-right">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAttempts.map((attempt) => {
+                          const normalizedStatus =
+                            attempt.status?.toLowerCase() ?? "pending";
+                          const statusIntent =
+                            STATUS_INTENTS[normalizedStatus] ??
+                            STATUS_INTENTS.pending;
+                          const label =
+                            STATUS_LABELS[normalizedStatus] ??
+                            attempt.status ??
+                            "Unknown";
+                          const assessmentTitle =
+                            attempt.assessmentId?.title ??
+                            "Untitled assessment";
+                          const candidateName = `${
+                            attempt.userId?.firstName ?? "Unknown"
+                          } ${attempt.userId?.lastName ?? ""}`.trim();
+                          const candidateEmail =
+                            attempt.userId?.emailAddress ?? "No email";
+                          const deadlineAbsolute = attempt.serverDeadline
+                            ? format(
+                                new Date(attempt.serverDeadline),
+                                "MMM d, yyyy h:mm a"
+                              )
+                            : null;
+                          const deadlineRelative = attempt.serverDeadline
+                            ? formatDistanceToNow(
+                                new Date(attempt.serverDeadline),
+                                { addSuffix: true }
+                              )
+                            : null;
+                          const startedRelative = attempt.startedAt
+                            ? formatDistanceToNow(new Date(attempt.startedAt), {
+                                addSuffix: true,
+                              })
+                            : null;
+                          const createdAbsolute = attempt.createdAt
+                            ? format(
+                                new Date(attempt.createdAt),
+                                "MMM d, yyyy h:mm a"
+                              )
+                            : "Unknown";
+                          const createdRelative = attempt.createdAt
+                            ? formatDistanceToNow(new Date(attempt.createdAt), {
+                                addSuffix: true,
+                              })
+                            : null;
+                          const heartbeatRelative = attempt.lastHeartbeatAt
+                            ? formatDistanceToNow(
+                                new Date(attempt.lastHeartbeatAt),
+                                { addSuffix: true }
+                              )
+                            : null;
+                          return (
+                            <TableRow
+                              key={attempt._id}
+                              className="transition-colors hover:bg-muted/40"
+                            >
+                              <TableCell className="align-top">
                                 <div className="space-y-1">
                                   <p className="font-medium text-foreground">
-                                    {candidateName || "Unknown candidate"}
+                                    {assessmentTitle}
                                   </p>
-                                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Mail className="h-3 w-3" />
-                                    {candidateEmail}
+                                  <p className="text-xs text-muted-foreground">
+                                    Deadline {deadlineRelative ?? "—"}
+                                  </p>
+                                  {deadlineAbsolute && (
+                                    <p className="text-[11px] text-muted-foreground/70">
+                                      {deadlineAbsolute}
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="align-top">
+                                <div className="flex items-start gap-3">
+                                  <Avatar className="h-9 w-9 border border-border/60">
+                                    <AvatarFallback className="bg-primary/10 text-xs font-semibold uppercase text-primary">
+                                      {getCandidateInitials(attempt)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="space-y-1">
+                                    <p className="font-medium text-foreground">
+                                      {candidateName || "Unknown candidate"}
+                                    </p>
+                                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <Mail className="h-3 w-3" />
+                                      {candidateEmail}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="align-top">
+                                <div className="space-y-1">
+                                  <Badge
+                                    variant={statusIntent.variant}
+                                    className="rounded-full px-3 py-1 text-[11px] uppercase tracking-widest"
+                                  >
+                                    {label}
+                                  </Badge>
+                                  <p className="text-xs text-muted-foreground">
+                                    {statusIntent.copy}
                                   </p>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="space-y-1">
-                                <Badge
-                                  variant={statusIntent.variant}
-                                  className="rounded-full px-3 py-1 text-[11px] uppercase tracking-widest"
-                                >
-                                  {label}
-                                </Badge>
-                                <p className="text-xs text-muted-foreground">{statusIntent.copy}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="space-y-1 text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1 text-foreground">
-                                  <Clock className="h-3 w-3 text-primary" />
-                                  {startedRelative ? `Started ${startedRelative}` : "Not started yet"}
+                              </TableCell>
+                              <TableCell className="align-top">
+                                <div className="space-y-1 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1 text-foreground">
+                                    <Clock className="h-3 w-3 text-primary" />
+                                    {startedRelative
+                                      ? `Started ${startedRelative}`
+                                      : "Not started yet"}
+                                  </div>
+                                  <p>Deadline {deadlineRelative ?? "—"}</p>
+                                  {heartbeatRelative && (
+                                    <p className="text-[11px] text-muted-foreground/70">
+                                      Heartbeat {heartbeatRelative}
+                                    </p>
+                                  )}
                                 </div>
-                                <p>Deadline {deadlineRelative ?? "—"}</p>
-                                {heartbeatRelative && (
-                                  <p className="text-[11px] text-muted-foreground/70">
-                                    Heartbeat {heartbeatRelative}
+                              </TableCell>
+                              <TableCell className="align-top">
+                                <div className="space-y-1 text-xs text-muted-foreground">
+                                  <p className="text-sm text-foreground">
+                                    {createdAbsolute}
                                   </p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="space-y-1 text-xs text-muted-foreground">
-                                <p className="text-sm text-foreground">{createdAbsolute}</p>
-                                {createdRelative && (
-                                  <p className="text-[11px] text-muted-foreground/70">
-                                    {createdRelative}
-                                  </p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="rounded-full border-border/60 bg-background/90 text-foreground"
-                                      onClick={() => navigate(`/assessments/attempts/${attempt._id}`)}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>View attempt</TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={() => handleDeleteAttempt(attempt._id)}
-                                      disabled={deleteAttemptMutation.isPending}
-                                    >
-                                      {deleteAttemptMutation.isPending ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Trash2 className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Remove attempt</TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                                  {createdRelative && (
+                                    <p className="text-[11px] text-muted-foreground/70">
+                                      {createdRelative}
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="align-top">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="rounded-full border-border/60 bg-background/90 text-foreground"
+                                        onClick={() =>
+                                          navigate(
+                                            `/assessments/attempts/${attempt._id}`
+                                          )
+                                        }
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      View attempt
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                        onClick={() =>
+                                          handleDeleteAttempt(attempt._id)
+                                        }
+                                        disabled={
+                                          deleteAttemptMutation.isPending
+                                        }
+                                      >
+                                        {deleteAttemptMutation.isPending ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Remove attempt
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
