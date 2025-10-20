@@ -90,6 +90,9 @@ const Admins = () => {
   } = useQuery({
     queryKey: ["admins"],
     queryFn: appService.getAdmins,
+    staleTime: 2,
+    refetchOnMount: true,
+    // networkMode
   });
 
   const createAdminMutation = useMutation({

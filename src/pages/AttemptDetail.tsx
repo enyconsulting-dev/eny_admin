@@ -52,6 +52,8 @@ interface Answer {
   };
   value: unknown;
   answeredAt: string;
+  isAnswerCorrect?: boolean;
+  scoreAwarded?: number;
 }
 
 interface AttemptDetail {
@@ -88,6 +90,11 @@ interface AttemptDetail {
   serverDeadline: string;
   startedAt?: string;
   endedAt?: string;
+  totals: {
+    score: number;
+    correct: number;
+    totalQuestions: number;
+  };
 }
 
 interface EventTracking {
@@ -622,7 +629,7 @@ const AttemptDetail = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             {cardsToRender.map((card, idx) => {
               const Icon = card.icon;
               return (
@@ -653,6 +660,45 @@ const AttemptDetail = () => {
                 </Card>
               );
             })}
+
+            {attempt && attempt.totals && attempt.totals.score && (
+              <>
+                <Card className="group relative overflow-hidden border border-border/50 bg-background/80 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-lg dark:bg-muted/20">
+                  <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <div className="absolute -top-12 right-0 h-32 w-32 rounded-full bg-emerald-500/20 blur-2xl" />
+                  </div>
+                  <CardContent className="relative flex items-start justify-between gap-4 p-5">
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">
+                        Overall Score
+                      </p>
+                      <p className="text-xl font-semibold text-foreground">
+                        {attempt.totals.score } points
+                      </p>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        {attempt.totals.correct } correct out of{" "}
+                        {attempt.totals.totalQuestions } questions
+                        {attempt.totals.totalQuestions > 0 && (
+                          <>
+                            {" "}
+                            (
+                            {Math.round(
+                              (attempt.totals.correct ||
+                                0 / attempt.totals.totalQuestions ||
+                                0) * 10
+                            )}
+                            % correct )
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-emerald-500/10 text-emerald-500 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                      <CheckCircle className="h-5 w-5" />
+                    </span>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -826,7 +872,12 @@ const AttemptDetail = () => {
                 attempt.answers.map((answer, index) => (
                   <Card
                     key={`${answer.questionId.prompt}-${index}`}
-                    className="border border-border/60 bg-background/70 shadow-sm transition-transform duration-200 hover:-translate-y-1 dark:bg-muted/10"
+                    className={cn(
+                      "border bg-background/70 shadow-sm transition-transform duration-200 hover:-translate-y-1 dark:bg-muted/10",
+                      answer.isAnswerCorrect
+                        ? "border-emerald-500/50 bg-emerald-500/5"
+                        : "border-border/60"
+                    )}
                   >
                     <CardContent className="space-y-4 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -841,9 +892,23 @@ const AttemptDetail = () => {
                             {format(new Date(answer.answeredAt), "PPP p")}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          Weight {answer.questionId.weight}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            Weight {answer.questionId.weight}
+                          </Badge>
+                          {answer.isAnswerCorrect !== undefined && (
+                            <Badge
+                              variant={
+                                answer.isAnswerCorrect
+                                  ? "default"
+                                  : "destructive"
+                              }
+                              className="text-xs"
+                            >
+                              {answer.isAnswerCorrect ? "Correct" : "Incorrect"}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-foreground">
@@ -853,6 +918,11 @@ const AttemptDetail = () => {
                           <span className="uppercase tracking-widest">
                             Type: {answer.questionId.type}
                           </span>
+                          {answer.scoreAwarded !== undefined && (
+                            <span className="uppercase tracking-widest">
+                              Score: {answer.scoreAwarded}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -875,7 +945,7 @@ const AttemptDetail = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                Event tracking ({events?.pagination?.totalItems || 0})
+                Event tracking ({events?.pagination?.totalItems || 0 })
               </CardTitle>
               <span className="text-xs text-muted-foreground">
                 {events?.results?.length
@@ -982,25 +1052,25 @@ const AttemptDetail = () => {
                       <Table className="relative">
                         <div className="relative">
                           {/* <div className="fixed right-5 overflow-hidden rounded-2xl left-5"> */}
-                            <TableHeader className="">
-                              <TableRow className="bg-muted/40">
-                                <TableHead className="min-w-[160px]">
-                                  Timestamp
-                                </TableHead>
-                                <TableHead className="min-w-[130px]">
-                                  Type
-                                </TableHead>
-                                <TableHead className="min-w-[220px]">
-                                  Summary
-                                </TableHead>
-                                <TableHead className="min-w-[500px]">
-                                  Client
-                                </TableHead>
-                                <TableHead className="w-12 text-right">
-                                  Details
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
+                          <TableHeader className="">
+                            <TableRow className="bg-muted/40">
+                              <TableHead className="min-w-[160px]">
+                                Timestamp
+                              </TableHead>
+                              <TableHead className="min-w-[130px]">
+                                Type
+                              </TableHead>
+                              <TableHead className="min-w-[220px]">
+                                Summary
+                              </TableHead>
+                              <TableHead className="min-w-[500px]">
+                                Client
+                              </TableHead>
+                              <TableHead className="w-12 text-right">
+                                Details
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
                           {/* </div> */}
 
                           {/* <div className="max-h-[26rem] overflow-y-scroll border border-border/60"> */}
