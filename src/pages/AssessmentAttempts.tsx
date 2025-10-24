@@ -444,7 +444,7 @@ const AssessmentAttempts = () => {
                   <SelectValue placeholder="Select attempt mode" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl border border-border/60 bg-background/95">
-                  <SelectItem value="single">Single assessment</SelectItem>
+                  {/* <SelectItem value="single">Single assessment</SelectItem> */}
                   <SelectItem value="multi">Multiple assessments</SelectItem>
                 </SelectContent>
               </Select>
@@ -475,7 +475,7 @@ const AssessmentAttempts = () => {
                         ? "Fetching candidates…"
                         : "No candidates found."}
                     </CommandEmpty>
-                    <CommandGroup className="max-h-56 overflow-y-auto">
+                    <CommandGroup className="max-h-56 overflow-y-auto no-scrollbar">
                       {users.map((user: any) => {
                         const fullName =
                           `${user.firstName ?? ""} ${
@@ -542,7 +542,7 @@ const AssessmentAttempts = () => {
                       ? "Fetching assessments…"
                       : "No assessments found."}
                   </CommandEmpty>
-                  <CommandGroup className="max-h-56 overflow-y-auto">
+                  <CommandGroup className="max-h-56 overflow-y-auto no-scrollbar">
                     {assessments.map((assessment: any) => {
                       const isSelected =
                         attemptMode === "single"
