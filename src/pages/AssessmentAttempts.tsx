@@ -134,7 +134,7 @@ const AssessmentAttempts = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedAssessment, setSelectedAssessment] = useState("");
   const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
-  const [selectedUser, setSelectedUser] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [attemptMode, setAttemptMode] = useState<"single" | "multi">("multi");
 
@@ -169,7 +169,7 @@ const AssessmentAttempts = () => {
       setIsCreateDialogOpen(false);
       setSelectedAssessment("");
       setSelectedAssessments([]);
-      setSelectedUser("");
+      setSelectedUsers([]);
       setAttemptMode("single");
     },
     onError: (error: any) => {
@@ -187,12 +187,12 @@ const AssessmentAttempts = () => {
     onSuccess: () => {
       toast({
         title: "Attempts created",
-        description: "The candidate can now begin their assessments.",
+        description: "The candidates can now begin their assessments.",
       });
       queryClient.invalidateQueries({ queryKey: ["attempts"] });
       setIsCreateDialogOpen(false);
       setSelectedAssessments([]);
-      setSelectedUser("");
+      setSelectedUsers([]);
       setAttemptMode("single");
     },
     onError: (error: any) => {
@@ -303,7 +303,7 @@ const AssessmentAttempts = () => {
 
   const handleCreateAttempt = () => {
     if (attemptMode === "single") {
-      if (!selectedAssessment || !selectedUser) {
+      if (!selectedAssessment || selectedUsers.length === 0) {
         toast({
           title: "Selection required",
           description: "Choose both an assessment and a candidate to continue.",
@@ -313,19 +313,19 @@ const AssessmentAttempts = () => {
       }
       createAttemptMutation.mutate({
         assessmentId: selectedAssessment,
-        userId: selectedUser,
+        userId: selectedUsers[0],
       });
     } else {
-      if (selectedAssessments.length === 0 || !selectedUser) {
+      if (selectedAssessments.length === 0 || selectedUsers.length === 0) {
         toast({
           title: "Selection required",
-          description: "Choose assessments and a candidate to continue.",
+          description: "Choose assessments and candidates to continue.",
           variant: "destructive",
         });
         return;
       }
       createAttemptsManyMutation.mutate({
-        userInfoId: selectedUser,
+        userInfoIds: selectedUsers,
         assessmentIds: selectedAssessments,
       });
     }
@@ -438,6 +438,7 @@ const AssessmentAttempts = () => {
                   setAttemptMode(value);
                   setSelectedAssessment("");
                   setSelectedAssessments([]);
+                  setSelectedUsers([]);
                 }}
               >
                 <SelectTrigger className="h-11 rounded-2xl border-border/60 bg-background/90">
@@ -455,9 +456,9 @@ const AssessmentAttempts = () => {
               </p>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Candidate
-              </Label>
+             <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+               {attemptMode === "single" ? "Candidate" : "Candidates"}
+             </Label>
               <div className="rounded-2xl border border-border/60 bg-muted/20">
                 <Command>
                   <CommandInput
@@ -481,13 +482,25 @@ const AssessmentAttempts = () => {
                           `${user.firstName ?? ""} ${
                             user.lastName ?? ""
                           }`.trim() || "Unnamed candidate";
-                        const isSelected = selectedUser === user._id;
+                        const isSelected = attemptMode === "single"
+                          ? selectedUsers.length > 0 && selectedUsers[0] === user._id
+                          : selectedUsers.includes(user._id);
                         return (
                           <CommandItem
                             key={user._id}
                             value={`${fullName} ${user.emailAddress}`}
                             className="flex items-center gap-3 px-3 py-2 text-sm"
-                            onSelect={() => setSelectedUser(user._id)}
+                            onSelect={() => {
+                              if (attemptMode === "single") {
+                                setSelectedUsers([user._id]);
+                              } else {
+                                setSelectedUsers((prev) =>
+                                  prev.includes(user._id)
+                                    ? prev.filter((id) => id !== user._id)
+                                    : [...prev, user._id]
+                                );
+                              }
+                            }}
                           >
                             <div className="flex flex-col">
                               <span className="font-medium text-foreground">
@@ -512,11 +525,24 @@ const AssessmentAttempts = () => {
                   </CommandList>
                 </Command>
               </div>
-              {selectedUser && (
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1 font-mono">
-                    {selectedUser}
-                  </span>
+              {selectedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedUsers.map((userId) => {
+                    const user = users.find((u: any) => u._id === userId);
+                    const fullName =
+                      user
+                        ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Unnamed candidate"
+                        : userId;
+                    return (
+                      <Badge
+                        key={userId}
+                        variant="outline"
+                        className="rounded-full border-border/60 bg-background/90 px-3 py-1 text-xs font-medium"
+                      >
+                        {fullName}
+                      </Badge>
+                    );
+                  })}
                 </div>
               )}
             </div>
