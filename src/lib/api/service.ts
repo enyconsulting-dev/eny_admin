@@ -113,7 +113,7 @@ export const appService = {
       throw error;
     }
   },
-  createAttemptsMany: (data: { userInfoId: string; assessmentIds: string[] }) => {
+  createAttemptsMany: (data: { userInfoIds: string[]; assessmentIds: string[] }) => {
     try {
       return apiClient.post("/attempts/many", data);
     } catch (error) {
