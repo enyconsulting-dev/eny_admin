@@ -136,7 +136,7 @@ const AssessmentAttempts = () => {
   const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [attemptMode, setAttemptMode] = useState<"single" | "multi">("single");
+  const [attemptMode, setAttemptMode] = useState<"single" | "multi">("multi");
 
   const {
     data: attemptsData,
