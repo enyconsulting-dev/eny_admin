@@ -661,44 +661,40 @@ const AttemptDetail = () => {
               );
             })}
 
-            {attempt && attempt.totals && attempt.totals.score && (
-              <>
-                <Card className="group relative overflow-hidden border border-border/50 bg-background/80 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-lg dark:bg-muted/20">
-                  <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <div className="absolute -top-12 right-0 h-32 w-32 rounded-full bg-emerald-500/20 blur-2xl" />
-                  </div>
-                  <CardContent className="relative flex items-start justify-between gap-4 p-5">
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">
-                        Overall Score
-                      </p>
-                      <p className="text-xl font-semibold text-foreground">
-                        {attempt.totals.score } points
-                      </p>
-                      <p className="text-xs leading-relaxed text-muted-foreground">
-                        {attempt.totals.correct } correct out of{" "}
-                        {attempt.totals.totalQuestions } questions
-                        {attempt.totals.totalQuestions > 0 && (
-                          <>
-                            {" "}
-                            (
-                            {Math.round(
-                              (attempt.totals.correct ||
-                                0 / attempt.totals.totalQuestions ||
-                                0) * 10
-                            )}
-                            % correct )
-                          </>
+            <Card className="group relative overflow-hidden border border-border/50 bg-background/80 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-lg dark:bg-muted/20">
+              <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <div className="absolute -top-12 right-0 h-32 w-32 rounded-full bg-emerald-500/20 blur-2xl" />
+              </div>
+              <CardContent className="relative flex items-start justify-between gap-4 p-5">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">
+                    Overall Score
+                  </p>
+                  <p className="text-xl font-semibold text-foreground">
+                    {attempt.totals.score} points
+                  </p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {attempt.totals.correct} correct out of{" "}
+                    {attempt.totals.totalQuestions} questions
+                    {attempt.totals.totalQuestions > 0 && (
+                      <>
+                        {" "}
+                        (
+                        {Math.round(
+                          (attempt.totals.correct ||
+                            0 / attempt.totals.totalQuestions ||
+                            0) * 10
                         )}
-                      </p>
-                    </div>
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-emerald-500/10 text-emerald-500 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-                      <CheckCircle className="h-5 w-5" />
-                    </span>
-                  </CardContent>
-                </Card>
-              </>
-            )}
+                        % correct )
+                      </>
+                    )}
+                  </p>
+                </div>
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-emerald-500/10 text-emerald-500 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                  <CheckCircle className="h-5 w-5" />
+                </span>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -945,7 +941,7 @@ const AttemptDetail = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                Event tracking ({events?.pagination?.totalItems || 0 })
+                Event tracking ({events?.pagination?.totalItems || 0})
               </CardTitle>
               <span className="text-xs text-muted-foreground">
                 {events?.results?.length
