@@ -223,7 +223,10 @@ const AssessmentAttempts = () => {
     },
   });
 
-  const attempts: Attempt[] = attemptsData?.data?.results ?? [];
+  const attempts: Attempt[] = useMemo(
+    () => attemptsData?.data?.results ?? [],
+    [attemptsData]
+  );
   const assessments = assessmentsData?.data?.results ?? [];
   const users = usersData?.data?.results ?? [];
 

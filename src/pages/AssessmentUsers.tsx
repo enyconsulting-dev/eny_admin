@@ -121,6 +121,7 @@ const AssessmentUsers = () => {
     onSuccess: () => {
       toast({ title: "User updated" });
       queryClient.invalidateQueries({ queryKey: ["assessment users", id] });
+      queryClient.invalidateQueries({ queryKey: ["all users"] });
       setEditingUserId(null);
       setEditForm(emptyUser());
     },
@@ -138,6 +139,7 @@ const AssessmentUsers = () => {
     onSuccess: () => {
       toast({ title: "User deleted" });
       queryClient.invalidateQueries({ queryKey: ["assessment users", id] });
+      queryClient.invalidateQueries({ queryKey: ["all users"] });
     },
     onError: (err: any) => {
       toast({
@@ -154,6 +156,7 @@ const AssessmentUsers = () => {
     onSuccess: () => {
       toast({ title: "Users uploaded" });
       queryClient.invalidateQueries({ queryKey: ["assessment users", id] });
+      queryClient.invalidateQueries({ queryKey: ["all users"] });
     },
     onError: (err: any) => {
       toast({
@@ -235,7 +238,10 @@ const AssessmentUsers = () => {
     }
   };
 
-  const users: any[] = allUsersData?.data.results ?? usersData?.data ?? [];
+  const users: any[] = useMemo(() => {
+    return allUsersData?.data.results ?? usersData?.data ?? [];
+  }, [allUsersData, usersData]);
+  
   const filteredUsers = useMemo(() => {
     if (!searchTerm.trim()) return users;
     const term = searchTerm.trim().toLowerCase();
@@ -528,9 +534,9 @@ const AssessmentUsers = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
+            <CardContent className="p-0 no-scrollbar">
+              <div className="overflow-x-auto no-scrollbar">
+                <Table className="no-scrollbar">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[220px]">Candidate</TableHead>
@@ -542,7 +548,7 @@ const AssessmentUsers = () => {
                       </TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="no-scrollbar">
                     {isLoading && (
                       <TableRow>
                         <TableCell colSpan={5}>
