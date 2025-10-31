@@ -9,6 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,9 +35,11 @@ import {
   Search,
   Shuffle,
   Sparkles,
+  Trash2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { appService } from "@/lib/api/service";
+import { useToast } from "@/hooks/use-toast";
 
 interface Assessment {
   id: string;
@@ -52,7 +65,11 @@ const formatDuration = (seconds: number) => {
 const AssessmentsList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     data: assessmentsData,
@@ -75,16 +92,20 @@ const AssessmentsList = () => {
         isActive: Boolean(a.isActive),
         questionCount: a.questionCount ?? 0,
       })),
-    [assessmentsData],
+    [assessmentsData]
   );
 
   const totalAssessments = assessments.length;
-  const liveAssessments = assessments.filter((assessment) => assessment.isActive).length;
+  const liveAssessments = assessments.filter(
+    (assessment) => assessment.isActive
+  ).length;
   const draftAssessments = totalAssessments - liveAssessments;
   const averageQuestions = totalAssessments
     ? Math.round(
-        assessments.reduce((count, assessment) => count + (assessment.questionCount ?? 0), 0) /
-          totalAssessments,
+        assessments.reduce(
+          (count, assessment) => count + (assessment.questionCount ?? 0),
+          0
+        ) / totalAssessments
       )
     : 0;
 
@@ -105,7 +126,10 @@ const AssessmentsList = () => {
 
   const isFiltering = statusFilter !== "all" || Boolean(searchTerm.trim());
   const showEmptyState = !isLoading && filteredAssessments.length === 0;
-  const filterOptions: Array<{ value: "all" | "active" | "inactive"; label: string }> = [
+  const filterOptions: Array<{
+    value: "all" | "active" | "inactive";
+    label: string;
+  }> = [
     { value: "all", label: `All (${totalAssessments})` },
     { value: "active", label: `Live (${liveAssessments})` },
     { value: "inactive", label: `Draft (${draftAssessments})` },
@@ -135,6 +159,30 @@ const AssessmentsList = () => {
     },
   ];
 
+  //delete assessment
+  const deleteAssessmentMutation = useMutation({
+    mutationFn: (id: string) => appService.deleteAssessmentById(id),
+    onSuccess: () => {
+      toast({ title: "Asssessment deleted" });
+      queryClient.invalidateQueries({ queryKey: ["assessments"] });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err?.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const isDeleting = deleteAssessmentMutation.isPending;
+
+
+  const handleDeleteAssessment = (id?: string) => {
+    if (!id) return;
+    deleteAssessmentMutation.mutate(id);
+  };
+
   if (isError) {
     return (
       <DashboardLayout>
@@ -143,14 +191,18 @@ const AssessmentsList = () => {
             <CardHeader>
               <CardTitle>Something went wrong</CardTitle>
               <CardDescription>
-                We couldn&apos;t load your assessments right now. Give it another try in a few seconds.
+                We couldn&apos;t load your assessments right now. Give it
+                another try in a few seconds.
               </CardDescription>
             </CardHeader>
             <CardFooter className="justify-center gap-3">
               <Button variant="outline" onClick={() => refetch()}>
                 Try again
               </Button>
-              <Button variant="ghost" onClick={() => navigate("/assessments/create")}>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/assessments/create")}
+              >
                 Start a new assessment
               </Button>
             </CardFooter>
@@ -165,13 +217,19 @@ const AssessmentsList = () => {
       <div className="space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
-            <Badge variant="outline" className="w-fit border-primary/30 bg-primary/5 text-xs uppercase tracking-wide">
+            <Badge
+              variant="outline"
+              className="w-fit border-primary/30 bg-primary/5 text-xs uppercase tracking-wide"
+            >
               Assessments
             </Badge>
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight">Assessment workspace</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">
+                Assessment workspace
+              </h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Monitor the status of every assessment, keep drafts moving, and jump into edits without losing context.
+                Monitor the status of every assessment, keep drafts moving, and
+                jump into edits without losing context.
               </p>
             </div>
           </div>
@@ -184,7 +242,10 @@ const AssessmentsList = () => {
               <CheckCircle2 className="h-4 w-4" />
               Candidate directory
             </Button>
-            <Button className="gap-2" onClick={() => navigate("/assessments/create")}>
+            <Button
+              className="gap-2"
+              onClick={() => navigate("/assessments/create")}
+            >
               <Plus className="h-4 w-4" />
               New assessment
             </Button>
@@ -195,14 +256,21 @@ const AssessmentsList = () => {
           {statCards.map((stat) => {
             const Icon = stat.icon;
             return (
-              <Card key={stat.key} className="border border-border/60 bg-muted/40 shadow-sm dark:bg-muted/10">
+              <Card
+                key={stat.key}
+                className="border border-border/60 bg-muted/40 shadow-sm dark:bg-muted/10"
+              >
                 <CardContent className="flex items-start justify-between gap-4 p-4">
                   <div className="space-y-2">
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">
                       {stat.label}
                     </p>
-                    <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {stat.description}
+                    </p>
                   </div>
                   <span className="rounded-full bg-background p-2 shadow-sm">
                     <Icon className="h-5 w-5 text-primary" />
@@ -233,7 +301,9 @@ const AssessmentsList = () => {
                 onClick={() => setStatusFilter(filter.value)}
               >
                 {filter.value === "active" && <Sparkles className="h-4 w-4" />}
-                {filter.value === "inactive" && <ArrowRight className="h-4 w-4 rotate-180" />}
+                {filter.value === "inactive" && (
+                  <ArrowRight className="h-4 w-4 rotate-180" />
+                )}
                 {filter.value === "all" && <ListChecks className="h-4 w-4" />}
                 {filter.label}
               </Button>
@@ -267,10 +337,14 @@ const AssessmentsList = () => {
                 : "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200";
 
               const orderLabel =
-                assessment.questionOrder === "random" ? "Randomized delivery" : "Fixed order";
+                assessment.questionOrder === "random"
+                  ? "Randomized delivery"
+                  : "Fixed order";
 
               const questionCount = assessment.questionCount ?? 0;
-              const questionCopy = `${questionCount} ${questionCount === 1 ? "question" : "questions"}`;
+              const questionCopy = `${questionCount} ${
+                questionCount === 1 ? "question" : "questions"
+              }`;
 
               return (
                 <Card
@@ -283,7 +357,10 @@ const AssessmentsList = () => {
                   <CardHeader className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-2">
-                        <Badge variant="outline" className={`w-fit rounded-full px-2.5 py-1 text-xs ${statusClassName}`}>
+                        <Badge
+                          variant="outline"
+                          className={`w-fit rounded-full px-2.5 py-1 text-xs ${statusClassName}`}
+                        >
                           {assessment.isActive ? "Live" : "Draft"}
                         </Badge>
                         <CardTitle className="text-xl font-semibold leading-tight text-foreground line-clamp-2">
@@ -298,7 +375,9 @@ const AssessmentsList = () => {
                         size="icon"
                         variant="ghost"
                         className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
-                        onClick={() => navigate(`/assessments/${assessment.id}`)}
+                        onClick={() =>
+                          navigate(`/assessments/${assessment.id}`)
+                        }
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -311,26 +390,35 @@ const AssessmentsList = () => {
                           <Clock3 className="h-4 w-4" />
                           Time limit
                         </div>
-                        <p className="mt-1 text-sm font-semibold text-foreground">{formatDuration(assessment.timeLimitSec)}</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {formatDuration(assessment.timeLimitSec)}
+                        </p>
                       </div>
                       <div className="rounded-lg border border-border/60 bg-background/80 p-3 dark:bg-background/60">
                         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           <ListChecks className="h-4 w-4" />
                           Inventory
                         </div>
-                        <p className="mt-1 text-sm font-semibold text-foreground">{questionCopy}</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {questionCopy}
+                        </p>
                       </div>
                       <div className="rounded-lg border border-border/60 bg-background/80 p-3 dark:bg-background/60">
                         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           <Shuffle className="h-4 w-4" />
                           Flow
                         </div>
-                        <p className="mt-1 text-sm font-semibold text-foreground">{orderLabel}</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {orderLabel}
+                        </p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      <span>Tip: add rule-based scoring or sections from the assessment detail view.</span>
+                      <span>
+                        Tip: add rule-based scoring or sections from the
+                        assessment detail view.
+                      </span>
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-wrap gap-2 pt-0">
@@ -346,11 +434,45 @@ const AssessmentsList = () => {
                       size="sm"
                       variant="outline"
                       className="flex-1 gap-2 sm:flex-none"
-                      onClick={() => navigate(`/assessments/edit/${assessment.id}`)}
+                      onClick={() =>
+                        navigate(`/assessments/edit/${assessment.id}`)
+                      }
                     >
                       <Edit className="h-4 w-4" />
                       Quick edit
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-2 text-destructive hover:text-destructive"
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Are you absolutely sure you want to delete {assessment.title}?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete this Assessment.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteAssessment(assessment.id)}
+                          >
+                            Permanently Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </CardFooter>
                 </Card>
               );

@@ -38,6 +38,13 @@ export const appService = {
       throw error;
     }
   },
+  deleteAssessmentById: (id: string) => {
+    try {
+      return apiClient.delete(`/assessments/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
   getAssessmentQuestionsByAssessmentId: (assessmentId: string) => {
     try {
       return apiClient.get(`/questions/assessment/${assessmentId}`);
