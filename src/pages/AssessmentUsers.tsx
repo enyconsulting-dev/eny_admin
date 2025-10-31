@@ -1,6 +1,18 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
@@ -195,7 +207,6 @@ const AssessmentUsers = () => {
 
   const handleDelete = (userId?: string) => {
     if (!userId) return;
-    if (!confirm("Delete this user?")) return;
     deleteUserMutation.mutate(userId);
   };
 
@@ -241,7 +252,7 @@ const AssessmentUsers = () => {
   const users: any[] = useMemo(() => {
     return allUsersData?.data.results ?? usersData?.data ?? [];
   }, [allUsersData, usersData]);
-  
+
   const filteredUsers = useMemo(() => {
     if (!searchTerm.trim()) return users;
     const term = searchTerm.trim().toLowerCase();
@@ -662,16 +673,40 @@ const AssessmentUsers = () => {
                                   <User className="h-4 w-4" />
                                   Review
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="gap-2 text-destructive hover:text-destructive"
-                                  onClick={() => handleDelete(userId)}
-                                  disabled={isDeleting}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="gap-2 text-destructive hover:text-destructive"
+                                      disabled={isDeleting}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Are you absolutely sure?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. This will
+                                        permanently delete this candidate profile.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(userId)}
+                                      >
+                                        Permanently Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </TableCell>
                           </TableRow>
