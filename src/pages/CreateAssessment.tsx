@@ -28,6 +28,7 @@ interface AssessmentPayload {
   timeLimitSec: number;
   questionOrder?: "fixed" | "random";
   isActive?: boolean;
+  assessmentType?: "text-based" | "video-based";
 }
 
 const DEFAULT_TIME_LIMIT_SEC = 3600;
@@ -57,6 +58,7 @@ const CreateAssessment = () => {
     timeLimitSec: DEFAULT_TIME_LIMIT_SEC,
     questionOrder: "fixed",
     isActive: true,
+    assessmentType: "text-based",
   });
 
   const [hasLoadedAssessment, setHasLoadedAssessment] = useState(false);
@@ -82,6 +84,7 @@ const CreateAssessment = () => {
       timeLimitSec: details.timeLimitSec ?? prev.timeLimitSec,
       questionOrder: details.questionOrder === "random" ? "random" : "fixed",
       isActive: typeof details.isActive === "boolean" ? details.isActive : prev.isActive,
+      assessmentType: details.assessmentType === "video-based" ? "video-based" : "text-based",
     }));
     setHasLoadedAssessment(true);
   }, [assessmentData]);
@@ -319,9 +322,41 @@ const CreateAssessment = () => {
                   </p>
                 </div>
 
-                <Separator />
+                <div className="max-w-[15rem]">
+                  <Label htmlFor="assessmentType">Assessment type</Label>
+                  <Select
+                    value={formData.assessmentType}
+                    onValueChange={(value: "text-based" | "video-based") =>
+                      setFormData((prev) => ({ ...prev, assessmentType: value }))
+                    }
+                    disabled={isSaving || showSkeleton}
+                  >
+                    <SelectTrigger id="assessmentType">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text-based">
+                        <div className="space-y-1">
+                          <p className="font-medium">Text-based</p>
+                          <p className="text-xs text-muted-foreground">
+                            Assessment consists of text questions.
+                          </p>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="video-based">
+                        <div className="space-y-1">
+                          <p className="font-medium">Video-based</p>
+                          <p className="text-xs text-muted-foreground">
+                            Assessment includes video components.
+                          </p>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
+
+                <div className="flex flex-wrap gap-6">
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <Label htmlFor="hours">Time limit</Label>
@@ -365,7 +400,7 @@ const CreateAssessment = () => {
                     </p>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="max-w-[20rem]">
                     <Label htmlFor="questionOrder">Question order</Label>
                     <Select
                       value={formData.questionOrder}
@@ -396,7 +431,7 @@ const CreateAssessment = () => {
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="flex items-start gap-3 rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                    <div className="mt-2 flex items-start gap-3 rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
                       <Shuffle className="mt-0.5 h-3.5 w-3.5 text-primary" />
                       <span>
                         You can still group questions into sections later using the assessment workspace.
