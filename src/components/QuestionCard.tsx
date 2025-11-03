@@ -29,6 +29,7 @@ import {
   Sparkles,
   Trash2,
   Type,
+  Video,
 } from "lucide-react";
 
 interface QuestionOption {
@@ -39,7 +40,7 @@ interface QuestionOption {
 interface Question {
   id?: string;
   assessmentId?: string;
-  type: "mcq" | "multi" | "text" | "code";
+  type: "mcq" | "multi" | "text" | "code" | "video";
   prompt: string;
   options?: QuestionOption[];
   correct?: string[];
@@ -55,6 +56,7 @@ type Props = {
   onUpdate: (id: string, payload: any) => void;
   onDelete: (id?: string) => void;
   onClose?: (value: boolean) => void;
+  allowedTypes?: Array<Question["type"]>;
 };
 
 type QuestionTypeInfo = {
@@ -89,6 +91,12 @@ const TYPE_META: Record<Question["type"], QuestionTypeInfo> = {
     accent: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 dark:text-emerald-200",
     icon: Code2,
   },
+  video: {
+    label: "Video response",
+    helper: "Enable candidates to submit video answers for communication skills assessment.",
+    accent: "bg-pink-500/10 text-pink-600 border border-pink-500/30 dark:text-pink-200",
+    icon: Video,
+  }
 };
 
 const buildMetadataEntries = (metadata: Question["metadata"]) => {
@@ -109,6 +117,7 @@ export default function QuestionCard({
   onUpdate,
   onDelete,
   onClose,
+  allowedTypes,
 }: Props) {
   const isNew = !question.id || String(question.id).startsWith("new-");
   const [editing, setEditing] = useState<boolean>(isNew);
@@ -117,10 +126,22 @@ export default function QuestionCard({
     buildMetadataEntries(question.metadata),
   );
 
+  // If creating a new question and restricted types are provided, default to first allowed
+  useEffect(() => {
+    if (isNew && allowedTypes && allowedTypes.length > 0) {
+      setLocal((prev) => ({ ...prev, type: allowedTypes[0] } as Question));
+    }
+  }, [isNew, allowedTypes]);
+
   useEffect(() => {
     setLocal({ ...question });
     setMetadataEntries(buildMetadataEntries(question.metadata));
   }, [question]);
+
+  const selectableTypes: Array<Question["type"]> = useMemo(
+    () => (allowedTypes && allowedTypes.length > 0 ? allowedTypes : ["mcq", "multi", "text", "code", "video"]),
+    [allowedTypes]
+  );
 
   const typeInfo = TYPE_META[local.type ?? "mcq"];
 
@@ -298,14 +319,15 @@ export default function QuestionCard({
                 value={local.type}
                 onValueChange={(value: Question["type"]) => setLocal({ ...local, type: value })}
               >
-                <SelectTrigger id={`type-${question.id ?? `new-${index}`}`}>
+                <SelectTrigger id={`type-${question.id ?? `new-${index}`}`} disabled={selectableTypes.length === 1}>
                   <SelectValue placeholder="Select question type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="mcq">Multiple choice (single answer)</SelectItem>
-                  <SelectItem value="multi">Multiple choice (multiple answers)</SelectItem>
-                  <SelectItem value="text">Text response</SelectItem>
-                  <SelectItem value="code">Code response</SelectItem>
+                  {selectableTypes.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {TYPE_META[t].label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

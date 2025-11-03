@@ -36,6 +36,8 @@ import {
   Code2,
   SearchX,
   Loader2,
+  Video,
+  VideoIcon,
 } from "lucide-react";
 
 interface QuestionOption {
@@ -46,7 +48,7 @@ interface QuestionOption {
 interface Question {
   id?: string;
   assessmentId: string;
-  type: "mcq" | "multi" | "text" | "code";
+  type: "mcq" | "multi" | "text" | "code" | "video";
   prompt: string;
   options?: QuestionOption[];
   correct?: string[];
@@ -61,6 +63,7 @@ interface AssessmentSummary {
   description: string;
   timeLimitSec: number;
   questionOrder: "fixed" | "random";
+  assessmentType: "text-based" | "video-based";
   isActive: boolean;
 }
 
@@ -75,12 +78,16 @@ const formatDuration = (seconds: number) => {
   return parts.join(" ");
 };
 
-const QUESTION_FILTERS: Array<{ value: "all" | Question["type"]; label: string }> = [
+const QUESTION_FILTERS: Array<{
+  value: "all" | Question["type"];
+  label: string;
+}> = [
   { value: "all", label: "All types" },
   { value: "mcq", label: "Single choice" },
   { value: "multi", label: "Multi select" },
   { value: "text", label: "Written" },
   { value: "code", label: "Code" },
+  { value: "video", label: "Video" },
 ];
 
 const FILTER_ICONS: Record<"all" | Question["type"], LucideIcon> = {
@@ -89,6 +96,7 @@ const FILTER_ICONS: Record<"all" | Question["type"], LucideIcon> = {
   multi: CheckSquare,
   text: AlignLeft,
   code: Code2,
+  video: Video,
 };
 
 const TYPE_LABEL_MAP: Record<Question["type"], string> = {
@@ -96,6 +104,7 @@ const TYPE_LABEL_MAP: Record<Question["type"], string> = {
   multi: "multi select",
   text: "written",
   code: "code",
+  video: "video recording",
 };
 
 const AssessmentDetail = () => {
@@ -111,12 +120,14 @@ const AssessmentDetail = () => {
     description: "Configure, iterate, and launch assessments with confidence.",
     timeLimitSec: 3600,
     questionOrder: "fixed",
+    assessmentType: "text-based",
     isActive: true,
   });
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [questionTypeFilter, setQuestionTypeFilter] = useState<(typeof QUESTION_FILTERS)[number]["value"]>("all");
+  const [questionTypeFilter, setQuestionTypeFilter] =
+    useState<(typeof QUESTION_FILTERS)[number]["value"]>("all");
 
   const {
     data: assessmentData,
@@ -141,7 +152,8 @@ const AssessmentDetail = () => {
   });
 
   const isAssessmentHydrated = Boolean(assessmentData?.data);
-  const isAssessmentNotFound = !isAssessmentLoading && !isAssessmentHydrated && !isAssessmentError;
+  const isAssessmentNotFound =
+    !isAssessmentLoading && !isAssessmentHydrated && !isAssessmentError;
   const showMetricSkeleton = isAssessmentLoading && !isAssessmentHydrated;
 
   useEffect(() => {
@@ -153,23 +165,26 @@ const AssessmentDetail = () => {
       description: details.description || prev.description,
       timeLimitSec: details.timeLimitSec ?? prev.timeLimitSec,
       questionOrder: details.questionOrder === "random" ? "random" : "fixed",
+      assessmentType: details.assessmentType,
       isActive: Boolean(details.isActive ?? prev.isActive),
     }));
   }, [assessmentData]);
 
   useEffect(() => {
     if (!questionsData?.data) return;
-    const mapped: Question[] = (questionsData.data ?? []).map((raw: any, index: number) => ({
-      id: raw._id || raw.id,
-      assessmentId: raw.assessmentId?._id || raw.assessmentId || id || "",
-      type: raw.type,
-      prompt: raw.prompt,
-      options: raw.options || [],
-      correct: raw.correct || [],
-      weight: raw.weight ?? 1,
-      order: raw.order ?? index + 1,
-      metadata: raw.metadata,
-    }));
+    const mapped: Question[] = (questionsData.data ?? []).map(
+      (raw: any, index: number) => ({
+        id: raw._id || raw.id,
+        assessmentId: raw.assessmentId?._id || raw.assessmentId || id || "",
+        type: raw.type,
+        prompt: raw.prompt,
+        options: raw.options || [],
+        correct: raw.correct || [],
+        weight: raw.weight ?? 1,
+        order: raw.order ?? index + 1,
+        metadata: raw.metadata,
+      })
+    );
     setQuestions(mapped);
   }, [questionsData, id]);
 
@@ -177,7 +192,9 @@ const AssessmentDetail = () => {
     mutationFn: appService.createQuestion,
     onSuccess: () => {
       toast({ title: "Question created successfully" });
-      queryClient.invalidateQueries({ queryKey: ["assessments questions", id] });
+      queryClient.invalidateQueries({
+        queryKey: ["assessments questions", id],
+      });
     },
     onError: (error: any) => {
       toast({
@@ -193,7 +210,9 @@ const AssessmentDetail = () => {
       appService.updateQuestionByQuestionId(questionId, data),
     onSuccess: () => {
       toast({ title: "Question updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ["assessments questions", id] });
+      queryClient.invalidateQueries({
+        queryKey: ["assessments questions", id],
+      });
     },
     onError: (error: any) => {
       toast({
@@ -209,7 +228,7 @@ const AssessmentDetail = () => {
     const placeholder: Question = {
       id: tempId,
       assessmentId: id || "",
-      type: "mcq",
+      type: assessment.assessmentType === "video-based" ? "video" : "mcq",
       prompt: "",
       options: [],
       correct: [],
@@ -237,17 +256,16 @@ const AssessmentDetail = () => {
   };
 
   const typeCounts = useMemo(() => {
-    return questions.reduce(
-      (acc, question) => {
-        acc[question.type] = (acc[question.type] ?? 0) + 1;
-        return acc;
-      },
-      {} as Record<Question["type"], number>,
-    );
+    return questions.reduce((acc, question) => {
+      acc[question.type] = (acc[question.type] ?? 0) + 1;
+      return acc;
+    }, {} as Record<Question["type"], number>);
   }, [questions]);
 
   const typeSummary = useMemo(() => {
-    const entries = Object.entries(typeCounts) as Array<[Question["type"], number]>;
+    const entries = Object.entries(typeCounts) as Array<
+      [Question["type"], number]
+    >;
     return entries
       .filter(([, count]) => count > 0)
       .map(([type, count]) => `${count} ${TYPE_LABEL_MAP[type]}`)
@@ -255,23 +273,28 @@ const AssessmentDetail = () => {
   }, [typeCounts]);
 
   const totalWeight = useMemo(
-    () => questions.reduce((total, question) => total + (question.weight ?? 0), 0),
-    [questions],
+    () =>
+      questions.reduce((total, question) => total + (question.weight ?? 0), 0),
+    [questions]
   );
 
   const filteredQuestions = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return questions.filter((question) => {
-      const matchesType = questionTypeFilter === "all" || question.type === questionTypeFilter;
+      const matchesType =
+        questionTypeFilter === "all" || question.type === questionTypeFilter;
       const matchesTerm =
         !term ||
         question.prompt.toLowerCase().includes(term) ||
-        question.options?.some((option) => option.text.toLowerCase().includes(term));
+        question.options?.some((option) =>
+          option.text.toLowerCase().includes(term)
+        );
       return matchesType && matchesTerm;
     });
   }, [questions, searchTerm, questionTypeFilter]);
 
-  const showQuestionEmptyState = !isQuestionsLoading && filteredQuestions.length === 0;
+  const showQuestionEmptyState =
+    !isQuestionsLoading && filteredQuestions.length === 0;
   const showQuestionsSkeleton = isQuestionsLoading;
 
   const metricCards = [
@@ -292,7 +315,8 @@ const AssessmentDetail = () => {
     {
       key: "order",
       label: "Delivery flow",
-      value: assessment.questionOrder === "random" ? "Randomised" : "Fixed order",
+      value:
+        assessment.questionOrder === "random" ? "Randomised" : "Fixed order",
       description:
         assessment.questionOrder === "random"
           ? "Each attempt shuffles questions."
@@ -303,7 +327,9 @@ const AssessmentDetail = () => {
       key: "status",
       label: "Assessment status",
       value: assessment.isActive ? "Live" : "Draft",
-      description: assessment.isActive ? "Invited candidates can start." : "Toggle live when ready.",
+      description: assessment.isActive
+        ? "Invited candidates can start."
+        : "Toggle live when ready.",
       icon: Sparkles,
     },
   ];
@@ -314,10 +340,13 @@ const AssessmentDetail = () => {
       return;
     }
     if (!confirm("Remove this question?")) return;
-    setQuestions((current) => current.filter((question) => question.id !== questionId));
+    setQuestions((current) =>
+      current.filter((question) => question.id !== questionId)
+    );
     toast({
       title: "Question removed",
-      description: "It will disappear for collaborators after you save your changes.",
+      description:
+        "It will disappear for collaborators after you save your changes.",
     });
   };
 
@@ -330,16 +359,23 @@ const AssessmentDetail = () => {
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-destructive/15">
                 <AlertCircle className="h-6 w-6" />
               </span>
-              <CardTitle className="text-2xl">We couldn&apos;t load this assessment</CardTitle>
+              <CardTitle className="text-2xl">
+                We couldn&apos;t load this assessment
+              </CardTitle>
               <CardDescription className="text-sm text-destructive/80">
-                Something prevented the workspace from loading. Try refreshing, or head back to the assessments list.
+                Something prevented the workspace from loading. Try refreshing,
+                or head back to the assessments list.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center justify-center gap-3">
               <Button variant="destructive" onClick={() => refetchAssessment()}>
                 Retry loading
               </Button>
-              <Button variant="ghost" className="text-destructive" onClick={() => navigate("/assessments")}>
+              <Button
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => navigate("/assessments")}
+              >
                 Go to assessments
               </Button>
             </CardContent>
@@ -360,14 +396,20 @@ const AssessmentDetail = () => {
               </span>
               <CardTitle className="text-2xl">Assessment not found</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                We couldn&apos;t find an assessment that matches this link. It may have been deleted or moved.
+                We couldn&apos;t find an assessment that matches this link. It
+                may have been deleted or moved.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center justify-center gap-3">
-              <Button variant="outline" onClick={() => navigate("/assessments")}>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/assessments")}
+              >
                 Browse assessments
               </Button>
-              <Button onClick={() => navigate("/assessments/create")}>Create new assessment</Button>
+              <Button onClick={() => navigate("/assessments/create")}>
+                Create new assessment
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -382,7 +424,11 @@ const AssessmentDetail = () => {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3 text-muted-foreground">
-                <Button variant="ghost" size="icon" onClick={() => navigate("/assessments")}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/assessments")}
+                >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <Badge variant={assessment.isActive ? "secondary" : "outline"}>
@@ -415,17 +461,32 @@ const AssessmentDetail = () => {
                   disabled={isAssessmentLoading}
                 />
                 <Label htmlFor="assessment-status" className="cursor-pointer">
-                  {assessment.isActive ? "Assessment is accepting attempts" : "Assessment is paused"}
+                  {assessment.isActive
+                    ? "Assessment is accepting attempts"
+                    : "Assessment is paused"}
                 </Label>
                 <span className="hidden h-4 w-px bg-border lg:block" />
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span>Total weight {totalWeight.toFixed(1)}</span>
                 </div>
+                <span className="hidden h-4 w-px bg-border lg:block" />
+                <div className="flex items-center gap-2">
+                  {assessment.assessmentType === "video-based" ? (
+                    <VideoIcon className="h-4 w-4 text-primary" />
+                  ) : (
+                    <FileQuestion className="h-4 w-4 text-primary" />
+                  )}
+                  <span>{assessment.assessmentType}</span>
+                </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="gap-2" onClick={() => handleAddCard()}>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => handleAddCard()}
+              >
                 <Plus className="h-4 w-4" />
                 Add question
               </Button>
@@ -435,7 +496,11 @@ const AssessmentDetail = () => {
                 onClick={() => refetchQuestions()}
                 disabled={isQuestionsLoading}
               >
-                <Loader2 className={`h-4 w-4 ${isQuestionsLoading ? "animate-spin" : ""}`} />
+                <Loader2
+                  className={`h-4 w-4 ${
+                    isQuestionsLoading ? "animate-spin" : ""
+                  }`}
+                />
                 {isQuestionsLoading ? "Refreshing…" : "Refresh questions"}
               </Button>
             </div>
@@ -466,8 +531,12 @@ const AssessmentDetail = () => {
                           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                             {metric.label}
                           </p>
-                          <p className="text-xl font-semibold text-foreground">{metric.value}</p>
-                          <p className="text-xs text-muted-foreground">{metric.description}</p>
+                          <p className="text-xl font-semibold text-foreground">
+                            {metric.value}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {metric.description}
+                          </p>
                         </div>
                         <span className="rounded-full border border-border/60 bg-background p-2 shadow-sm">
                           <Icon className="h-5 w-5 text-primary" />
@@ -497,7 +566,9 @@ const AssessmentDetail = () => {
               return (
                 <Button
                   key={filter.value}
-                  variant={questionTypeFilter === filter.value ? "default" : "outline"}
+                  variant={
+                    questionTypeFilter === filter.value ? "default" : "outline"
+                  }
                   size="sm"
                   className="gap-2"
                   onClick={() => setQuestionTypeFilter(filter.value)}
@@ -519,14 +590,22 @@ const AssessmentDetail = () => {
                 </span>
                 <CardTitle>We ran into an issue loading questions</CardTitle>
                 <CardDescription className="text-sm text-destructive/80">
-                  Something interrupted the questions fetch. Retry in a moment or add a draft question offline.
+                  Something interrupted the questions fetch. Retry in a moment
+                  or add a draft question offline.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center justify-center gap-3">
-                <Button variant="destructive" onClick={() => refetchQuestions()}>
+                <Button
+                  variant="destructive"
+                  onClick={() => refetchQuestions()}
+                >
                   Try again
                 </Button>
-                <Button variant="ghost" className="text-destructive" onClick={() => handleAddCard()}>
+                <Button
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={() => handleAddCard()}
+                >
                   Add draft
                 </Button>
               </CardContent>
@@ -551,7 +630,9 @@ const AssessmentDetail = () => {
             ))
           ) : (
             filteredQuestions.map((question, index) => {
-              const originalIndex = questions.findIndex((item) => item.id === question.id);
+              const originalIndex = questions.findIndex(
+                (item) => item.id === question.id
+              );
               const displayIndex = originalIndex >= 0 ? originalIndex : index;
               return (
                 <QuestionCard
@@ -559,14 +640,23 @@ const AssessmentDetail = () => {
                   question={question}
                   index={displayIndex}
                   onCreate={(payload) => createQuestionMutation.mutate(payload)}
-                  onUpdate={(questionId, payload) => editQuestionMutation.mutate({ questionId, data: payload })}
+                  onUpdate={(questionId, payload) =>
+                    editQuestionMutation.mutate({ questionId, data: payload })
+                  }
                   onDelete={(questionId) => {
                     if (String(questionId ?? "").startsWith("new-")) {
-                      setQuestions((current) => current.filter((item) => item.id !== questionId));
+                      setQuestions((current) =>
+                        current.filter((item) => item.id !== questionId)
+                      );
                       return;
                     }
                     handleDeleteQuestion(questionId);
                   }}
+                  allowedTypes={
+                    assessment.assessmentType === "video-based"
+                      ? ["video"]
+                      : ["mcq", "multi", "text", "code", "video"]
+                  }
                 />
               );
             })
