@@ -75,6 +75,7 @@ interface Attempt {
     _id?: string;
     title: string;
     timeLimitSec: number;
+    assessmentType?: string;
   };
   userId: {
     _id?: string;
@@ -238,13 +239,16 @@ const AssessmentAttempts = () => {
       const lastName = attempt.userId?.lastName?.toLowerCase() ?? "";
       const email = attempt.userId?.emailAddress?.toLowerCase() ?? "";
       const status = attempt.status?.toLowerCase() ?? "";
+      const assessmentType =
+        attempt.assessmentId?.assessmentType.toLowerCase() ?? "";
       const matchesStatus = statusFilter === "all" || status === statusFilter;
       const matchesQuery =
         !query ||
         title.includes(query) ||
         firstName.includes(query) ||
         lastName.includes(query) ||
-        email.includes(query);
+        email.includes(query) ||
+        assessmentType.includes(query);
       return matchesStatus && matchesQuery;
     });
   }, [attempts, searchTerm, statusFilter]);
@@ -459,9 +463,9 @@ const AssessmentAttempts = () => {
               </p>
             </div>
             <div className="space-y-2">
-             <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-               {attemptMode === "single" ? "Candidate" : "Candidates"}
-             </Label>
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                {attemptMode === "single" ? "Candidate" : "Candidates"}
+              </Label>
               <div className="rounded-2xl border border-border/60 bg-muted/20">
                 <Command>
                   <CommandInput
@@ -485,9 +489,11 @@ const AssessmentAttempts = () => {
                           `${user.firstName ?? ""} ${
                             user.lastName ?? ""
                           }`.trim() || "Unnamed candidate";
-                        const isSelected = attemptMode === "single"
-                          ? selectedUsers.length > 0 && selectedUsers[0] === user._id
-                          : selectedUsers.includes(user._id);
+                        const isSelected =
+                          attemptMode === "single"
+                            ? selectedUsers.length > 0 &&
+                              selectedUsers[0] === user._id
+                            : selectedUsers.includes(user._id);
                         return (
                           <CommandItem
                             key={user._id}
@@ -532,10 +538,11 @@ const AssessmentAttempts = () => {
                 <div className="flex flex-wrap gap-2">
                   {selectedUsers.map((userId) => {
                     const user = users.find((u: any) => u._id === userId);
-                    const fullName =
-                      user
-                        ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Unnamed candidate"
-                        : userId;
+                    const fullName = user
+                      ? `${user.firstName ?? ""} ${
+                          user.lastName ?? ""
+                        }`.trim() || "Unnamed candidate"
+                      : userId;
                     return (
                       <Badge
                         key={userId}
@@ -906,20 +913,21 @@ const AssessmentAttempts = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="overflow-y-scroll h-[40vh] no-scrollbar">
+                  <div className="overflow-y-scroll h-[60vh] no-scrollbar">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead className="min-w-[220px]">
                             Assessment
                           </TableHead>
-                          <TableHead className="min-w-[220px]">
+                          <TableHead className="max-w-[250px]">
                             Candidate
                           </TableHead>
+                         
                           <TableHead className="min-w-[160px]">
                             Status
                           </TableHead>
-                          <TableHead className="min-w-[220px]">
+                          <TableHead className="min-w-[200px]">
                             Timeline
                           </TableHead>
                           <TableHead className="min-w-[150px]">
@@ -983,6 +991,8 @@ const AssessmentAttempts = () => {
                                 { addSuffix: true }
                               )
                             : null;
+                          const assessmentType =
+                            attempt.assessmentId?.assessmentType ?? "Unknown";
                           return (
                             <TableRow
                               key={attempt._id}
@@ -1003,8 +1013,8 @@ const AssessmentAttempts = () => {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="align-top">
-                                <div className="flex items-start gap-3">
+                              <TableCell className="align-top max-w-[250px]">
+                                <div className="space-y-1 flex items-start gap-2">
                                   <Avatar className="h-9 w-9 border border-border/60">
                                     <AvatarFallback className="bg-primary/10 text-xs font-semibold uppercase text-primary">
                                       {getCandidateInitials(attempt)}
@@ -1018,9 +1028,13 @@ const AssessmentAttempts = () => {
                                       <Mail className="h-3 w-3" />
                                       {candidateEmail}
                                     </p>
+                                    <p className="text-[11px] uppercase tracking-widest">
+                                     {assessmentType}
+                                    </p>
                                   </div>
                                 </div>
                               </TableCell>
+
                               <TableCell className="align-top">
                                 <div className="space-y-1">
                                   <Badge

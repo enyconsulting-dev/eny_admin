@@ -654,7 +654,8 @@ const Admins = () => {
                                 size="sm"
                                 className="gap-2 text-orange-600 hover:text-orange-600"
                                 onClick={() => handleDeactivateAdmin(admin._id)}
-                                disabled={deactivateAdminMutation.isPending}
+                                // disabled={deactivateAdminMutation.isPending}
+                                disabled
                               >
                                 <UserX className="h-4 w-4" />
                                 Deactivate
@@ -665,7 +666,8 @@ const Admins = () => {
                                 size="sm"
                                 className="gap-2 text-green-600 hover:text-green-600"
                                 onClick={() => handleActivateAdmin(admin._id)}
-                                disabled={activateAdminMutation.isPending}
+                                // disabled={activateAdminMutation.isPending}
+                                disabled
                               >
                                 <UserCheck className="h-4 w-4" />
                                 Activate
