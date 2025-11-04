@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
@@ -283,7 +284,7 @@ const AttemptDetail = () => {
     </div>
   );
 
-  const renderValue = (value: unknown): string => {
+  const renderValue = (value: unknown): ReactNode => {
     if (value === null || value === undefined) {
       return "No answer";
     }
@@ -321,6 +322,42 @@ const AttemptDetail = () => {
     }
 
     if (typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+      const fileType = typeof obj["file_type"] === "string" ? (obj["file_type"] as string) : undefined;
+      const videoUrl = typeof obj["video_url"] === "string" ? (obj["video_url"] as string) : undefined;
+      const key = typeof obj["key"] === "string" ? (obj["key"] as string) : undefined;
+      const text = typeof obj["text"] === "string" ? (obj["text"] as string) : undefined;
+
+      // Special handling for recorded video answers
+      if (fileType && videoUrl) {
+        const src = /^(https?:)?\/\//i.test(videoUrl) ? videoUrl : `https://${videoUrl}`;
+        return (
+          <div className="flex flex-col gap-2">
+            <video
+              className="max-w-full rounded-md border border-border/60 bg-black/80"
+              preload="metadata"
+              onClick={(e) => {
+                const v = e.currentTarget;
+                if (v.paused) v.play(); else v.pause();
+              }}
+            >
+              <source src={src} type={fileType} />
+              Your browser does not support the video tag.
+            </video>
+            <span className="text-xs text-muted-foreground">Click video to play/pause</span>
+          </div>
+        );
+      }
+
+      if (key && text) {
+        return (
+          <div>
+            <strong>{key}:</strong> {text}
+          </div>
+        )
+      }
+
+      // Fallback: pretty-print any other object
       return JSON.stringify(value, null, 2);
     }
 
