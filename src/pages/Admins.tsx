@@ -678,7 +678,8 @@ const Admins = () => {
                               size="sm"
                               className="gap-2 text-destructive hover:text-destructive"
                               onClick={() => handleDeleteAdmin(admin._id)}
-                              disabled={deleteAdminMutation.isPending}
+                              // disabled={deleteAdminMutation.isPending}
+                              disabled
                             >
                               <Trash2 className="h-4 w-4" />
                               Delete

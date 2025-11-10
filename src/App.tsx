@@ -19,6 +19,7 @@ import AttemptDetail from "./pages/AttemptDetail";
 import AssessmentsList from "./pages/AssessmentsList";
 import Admins from "./pages/Admins";
 import AdminDetail from "./pages/AdminDetail";
+import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Provider } from "react-redux";
@@ -38,6 +39,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Login />} />
+                <Route path="/set-password" element={<SetPassword />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
                 <Route path="/events/create" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
