@@ -205,6 +205,13 @@ export const appService = {
       throw error;
     }
   },
+  setPassword: (data: {token: string, password: string}) => {
+    try {
+      return apiClient.post("/admins/accept-invitation", data);
+    } catch (error) {
+      throw error;
+    }
+  },
   getAttemptEvents: (attemptId: string, page: number = 1, limit: number = 10) => {
     try {
       return apiClient.get(`/attempt-event-tracking/attempt/${attemptId}?page=${page}&limit=${limit}`);

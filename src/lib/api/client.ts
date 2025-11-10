@@ -2,7 +2,7 @@ import { store } from "@/store";
 
 const BASE_URL =
   process.env.NODE_ENV === "development"
-    ? "http://localhost:3010/v1"
+    ? "http://localhost:3011/v1"
     : "https://event-api-k0uh.onrender.com/v1";
 
 const getAuthHeaders = () => {
