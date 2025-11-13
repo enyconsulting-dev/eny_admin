@@ -19,6 +19,13 @@ import AttemptDetail from "./pages/AttemptDetail";
 import AssessmentsList from "./pages/AssessmentsList";
 import Admins from "./pages/Admins";
 import AdminDetail from "./pages/AdminDetail";
+import JobPlatform from "./pages/JobPlatform";
+import JobUsers from "./pages/JobUsers";
+import JobUserDetail from "./pages/JobUserDetailExpanded";
+import JobPostings from "./pages/JobPostings";
+import JobPostingDetail from "./pages/JobPostingDetail";
+import JobApplications from "./pages/JobApplications";
+import JobApplicationDetail from "./pages/JobApplicationDetail";
 import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -57,6 +64,13 @@ const App = () => (
                 <Route path="/assessments/attempts/:id" element={<ProtectedRoute><AttemptDetail /></ProtectedRoute>} />
                 <Route path="/admins" element={<ProtectedRoute><Admins /></ProtectedRoute>} />
                 <Route path="/admins/:id" element={<ProtectedRoute><AdminDetail /></ProtectedRoute>} />
+                <Route path="/jobs" element={<ProtectedRoute><JobPlatform /></ProtectedRoute>} />
+                <Route path="/jobs/users" element={<ProtectedRoute><JobUsers /></ProtectedRoute>} />
+                <Route path="/jobs/users/:id" element={<ProtectedRoute><JobUserDetail /></ProtectedRoute>} />
+                <Route path="/jobs/postings" element={<ProtectedRoute><JobPostings /></ProtectedRoute>} />
+                <Route path="/jobs/postings/:id" element={<ProtectedRoute><JobPostingDetail /></ProtectedRoute>} />
+                <Route path="/jobs/applications" element={<ProtectedRoute><JobApplications /></ProtectedRoute>} />
+                <Route path="/jobs/applications/:id" element={<ProtectedRoute><JobApplicationDetail /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

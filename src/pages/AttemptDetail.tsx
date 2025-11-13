@@ -4,6 +4,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+  WidthType,
+} from "docx";
+import {
   AlertCircle,
   ArrowLeft,
   Bot,
@@ -12,6 +21,7 @@ import {
   ChevronUp,
   CheckCircle,
   Clock,
+  Download,
   FileText,
   Loader2,
   Monitor,
@@ -154,6 +164,208 @@ const AttemptDetail = () => {
 
   const toggleEventRow = (eventId: string) => {
     setExpandedEventId((previous) => (previous === eventId ? null : eventId));
+  };
+
+  const generateDocxContent = () => {
+    if (!attempt) return [];
+
+    const content = [];
+
+    // Title
+    content.push(
+      new Paragraph({
+        text: "Assessment Attempt Report",
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+      })
+    );
+
+    // Assessment Info
+    content.push(
+      new Paragraph({
+        text: `Assessment: ${attempt.assessmentId.title}`,
+        heading: HeadingLevel.HEADING_1,
+      })
+    );
+
+    content.push(
+      new Paragraph({
+        text: `Description: ${attempt.assessmentId.description}`,
+      })
+    );
+
+    // Candidate Info
+    content.push(
+      new Paragraph({
+        text: "Candidate Information",
+        heading: HeadingLevel.HEADING_2,
+      })
+    );
+
+    content.push(
+      new Paragraph({
+        text: `Name: ${attempt.userId.firstName} ${attempt.userId.lastName}`,
+      })
+    );
+
+    content.push(
+      new Paragraph({
+        text: `Email: ${attempt.userId.emailAddress}`,
+      })
+    );
+
+    // Attempt Info
+    content.push(
+      new Paragraph({
+        text: "Attempt Information",
+        heading: HeadingLevel.HEADING_2,
+      })
+    );
+
+    content.push(
+      new Paragraph({
+        text: `Status: ${attempt.status}`,
+      })
+    );
+
+    content.push(
+      new Paragraph({
+        text: `Started: ${attempt.startedAt ? format(new Date(attempt.startedAt), "PPP p") : "Not started"}`,
+      })
+    );
+
+    content.push(
+      new Paragraph({
+        text: `Completed: ${attempt.endedAt ? format(new Date(attempt.endedAt), "PPP p") : "Not completed"}`,
+      })
+    );
+
+    if (attempt.totals) {
+      content.push(
+        new Paragraph({
+          text: `Score: ${attempt.totals.score} points (${attempt.totals.correct}/${attempt.totals.totalQuestions} correct)`,
+        })
+      );
+    }
+
+    // Answers Section
+    content.push(
+      new Paragraph({
+        text: "Answers",
+        heading: HeadingLevel.HEADING_2,
+      })
+    );
+
+    attempt.answers.forEach((answer, index) => {
+      content.push(
+        new Paragraph({
+          text: `Question ${index + 1}: ${answer.questionId.prompt}`,
+          heading: HeadingLevel.HEADING_3,
+        })
+      );
+
+      content.push(
+        new Paragraph({
+          text: `Type: ${answer.questionId.type}`,
+        })
+      );
+
+      content.push(
+        new Paragraph({
+          text: `Weight: ${answer.questionId.weight}`,
+        })
+      );
+
+      content.push(
+        new Paragraph({
+          text: `Answered: ${format(new Date(answer.answeredAt), "PPP p")}`,
+        })
+      );
+
+      if (answer.isAnswerCorrect !== undefined) {
+        content.push(
+          new Paragraph({
+            text: `Correct: ${answer.isAnswerCorrect ? "Yes" : "No"}`,
+          })
+        );
+      }
+
+      if (answer.scoreAwarded !== undefined) {
+        content.push(
+          new Paragraph({
+            text: `Score Awarded: ${answer.scoreAwarded}`,
+          })
+        );
+      }
+
+      // Handle different answer types
+      let answerText = "";
+      if (answer.value === null || answer.value === undefined) {
+        answerText = "No answer";
+      } else if (typeof answer.value === "string" || typeof answer.value === "number" || typeof answer.value === "boolean") {
+        answerText = String(answer.value);
+      } else if (Array.isArray(answer.value)) {
+        if (answer.value.every(item => typeof item === "object" && item !== null && "key" in item && "text" in item)) {
+          answerText = answer.value.map(item => `${item.key}: ${item.text}`).join(", ");
+        } else {
+          answerText = JSON.stringify(answer.value, null, 2);
+        }
+      } else if (typeof answer.value === "object") {
+        const obj = answer.value as Record<string, unknown>;
+        const videoUrl = typeof obj["video_url"] === "string" ? (obj["video_url"] as string) : undefined;
+
+        if (videoUrl && answer.questionId.type === "Video") {
+          const src = /^(https?:)?\/\//i.test(videoUrl) ? videoUrl : `https://${videoUrl}`;
+          answerText = `Video Response: ${src}`;
+        } else if ("key" in obj && "text" in obj) {
+          answerText = `${obj.key}: ${obj.text}`;
+        } else {
+          answerText = JSON.stringify(answer.value, null, 2);
+        }
+      } else {
+        answerText = String(answer.value);
+      }
+
+      content.push(
+        new Paragraph({
+          text: `Answer: ${answerText}`,
+        })
+      );
+
+      // Add spacing between questions
+      content.push(new Paragraph({ text: "" }));
+    });
+
+    return content;
+  };
+
+  const downloadDocx = async () => {
+    if (!attempt) return;
+
+    try {
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            children: generateDocxContent(),
+          },
+        ],
+      });
+
+      const blob = await Packer.toBlob(doc);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `attempt-${attempt._id}-answers.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error generating DOCX:", error);
+      // You could add a toast notification here
+    }
   };
 
   const isHydrated = Boolean(attempt);
@@ -637,15 +849,27 @@ const AttemptDetail = () => {
                     </span>
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-fit gap-2 rounded-full border-primary/30 bg-background/70 backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/10"
-                  onClick={() => navigate("/assessments/attempts")}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to attempts
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-fit gap-2 rounded-full border-primary/30 bg-background/70 backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/10"
+                    onClick={() => navigate("/assessments/attempts")}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to attempts
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2 rounded-full"
+                    onClick={downloadDocx}
+                    disabled={!attempt}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Answers (DOCX)
+                  </Button>
+                </div>
               </div>
               <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-end">
                 <div className="flex flex-wrap gap-2">

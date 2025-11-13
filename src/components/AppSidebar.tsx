@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Calendar, BarChart3, Settings, LogOut, FileText, Users } from "lucide-react";
+import { Calendar, BarChart3, Settings, LogOut, FileText, Users, Briefcase } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
   { name: "Events", href: "/events", icon: Calendar },
   { name: "Assessments", href: "/assessments", icon: FileText },
+  { name: "Job Search Platform", href: "/jobs", icon: Briefcase },
   { name: "Admins", href: "/admins", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

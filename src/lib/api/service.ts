@@ -1,5 +1,6 @@
 import { create } from "domain";
 import { apiClient } from "./client";
+import { jbsApiClient } from "./jbs-client";
 
 export const appService = {
   //admin authentication
@@ -215,6 +216,116 @@ export const appService = {
   getAttemptEvents: (attemptId: string, page: number = 1, limit: number = 10) => {
     try {
       return apiClient.get(`/attempt-event-tracking/attempt/${attemptId}?page=${page}&limit=${limit}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Job Search Platform APIs
+  // Users
+  getJobUsers: (page: number = 1, limit: number = 10) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/users?page=${page}&limit=${limit}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  getJobUserById: (id: string) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/users/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  getJobUserStatistics: () => {
+    try {
+      return jbsApiClient.get("/admin/jbs/statistics/users");
+    } catch (error) {
+      throw error;
+    }
+  },
+  activateJobUser: (id: string) => {
+    try {
+      return jbsApiClient.patch(`/admin/jbs/users/${id}/activate`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deactivateJobUser: (id: string) => {
+    try {
+      return jbsApiClient.patch(`/admin/jbs/users/${id}/deactivate`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deleteJobUser: (id: string) => {
+    try {
+      return jbsApiClient.delete(`/admin/jbs/users/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Job Postings
+  getJobPostings: (page: number = 1, limit: number = 10) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/job-postings?page=${page}&limit=${limit}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  getJobPostingStatistics: () => {
+    try {
+      return jbsApiClient.get("/admin/jbs/statistics/job-postings");
+    } catch (error) {
+      throw error;
+    }
+  },
+  getJobPostingById: (id: string) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/job-postings/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  blockJobPosting: (id: string) => {
+    try {
+      return jbsApiClient.patch(`/admin/jbs/job-postings/${id}/block`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  unblockJobPosting: (id: string) => {
+    try {
+      return jbsApiClient.patch(`/admin/jbs/job-postings/${id}/unblock`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deleteJobPosting: (id: string) => {
+    try {
+      return jbsApiClient.delete(`/admin/jbs/job-postings/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Job Applications
+  getJobApplications: () => {
+    try {
+      return jbsApiClient.get("/admin/jbs/job-applications");
+    } catch (error) {
+      throw error;
+    }
+  },
+  getJobApplicationById: (id: string) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/job-applications/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Statistics
+  getJobPlatformStats: () => {
+    try {
+      return jbsApiClient.get("/admin/jbs/statistics");
     } catch (error) {
       throw error;
     }
