@@ -94,7 +94,7 @@ export const appService = {
   // Bulk create users
   createUsersBulk: (data: any[]) => {
     try {
-      return apiClient.post(`/users-info/bulk`, { users: data });
+      return apiClient.post(`/users-info/bulk`, data);
     } catch (error) {
       throw error;
     }
