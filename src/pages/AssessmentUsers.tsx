@@ -693,7 +693,8 @@ const AssessmentUsers = () => {
                                       </AlertDialogTitle>
                                       <AlertDialogDescription>
                                         This action cannot be undone. This will
-                                        permanently delete this candidate profile.
+                                        permanently delete this candidate
+                                        profile.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -719,139 +720,142 @@ const AssessmentUsers = () => {
             </CardContent>
           </Card>
 
-          <div className="space-y-6">
-            <Card className="border border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle>
-                  {editingUserId
-                    ? "Edit candidate profile"
-                    : "Select a candidate"}
-                </CardTitle>
-                <CardDescription>
-                  {editingUserId
-                    ? "Update the selected candidate’s profile so they are ready for upcoming assessments."
-                    : "Choose a candidate from the table to view and edit their details."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {editingUserId ? (
-                  <div className="space-y-4">
-                    {currentEditingName && (
-                      <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-sm">
-                        Managing{" "}
-                        <span className="font-medium text-foreground">
-                          {currentEditingName}
-                        </span>
-                        {editForm.emailAddress ? (
-                          <>
-                            <span className="mx-2 text-muted-foreground">
-                              •
-                            </span>
-                            {editForm.emailAddress}
-                          </>
-                        ) : (
-                          ""
-                        )}
+          <div className="relative space-y-6">
+            <div className="sticky top-6 space-y-6">
+              <Card className="border border-border/60 shadow-sm">
+                <CardHeader>
+                  <CardTitle>
+                    {editingUserId
+                      ? "Edit candidate profile"
+                      : "Select a candidate"}
+                  </CardTitle>
+                  <CardDescription>
+                    {editingUserId
+                      ? "Update the selected candidate's profile so they are ready for upcoming assessments."
+                      : "Choose a candidate from the table to view and edit their details."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {editingUserId ? (
+                    <div className="space-y-4">
+                      {currentEditingName && (
+                        <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-sm">
+                          Managing:{" "}{currentEditingName}{" "}
+                         
+                          {editForm.emailAddress ? (
+                            <>
+                              {editForm.emailAddress}
+                            </>
+                          ) : (
+                            ""
+                          )}
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-first-name">First name</Label>
+                        <Input
+                          id="edit-first-name"
+                          value={editForm.firstName}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              firstName: e.target.value,
+                            })
+                          }
+                        />
                       </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-first-name">First name</Label>
-                      <Input
-                        id="edit-first-name"
-                        value={editForm.firstName}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            firstName: e.target.value,
-                          })
-                        }
-                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-last-name">Last name</Label>
+                        <Input
+                          id="edit-last-name"
+                          value={editForm.lastName}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              lastName: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-email">Email address</Label>
+                        <Input
+                          id="edit-email"
+                          type="email"
+                          value={editForm.emailAddress}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              emailAddress: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-mobile">Mobile number</Label>
+                        <Input
+                          id="edit-mobile"
+                          type="tel"
+                          value={editForm.mobileNumber}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              mobileNumber: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        <Button
+                          onClick={handleUpdateUser}
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? "Saving..." : "Save changes"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          disabled={isUpdating}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-last-name">Last name</Label>
-                      <Input
-                        id="edit-last-name"
-                        value={editForm.lastName}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, lastName: e.target.value })
-                        }
-                      />
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border/70 bg-muted/30 p-6 text-sm text-muted-foreground">
+                      Pick a candidate from the table to review their profile,
+                      update details, or resend information.
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-email">Email address</Label>
-                      <Input
-                        id="edit-email"
-                        type="email"
-                        value={editForm.emailAddress}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            emailAddress: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-mobile">Mobile number</Label>
-                      <Input
-                        id="edit-mobile"
-                        type="tel"
-                        value={editForm.mobileNumber}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            mobileNumber: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <Button onClick={handleUpdateUser} disabled={isUpdating}>
-                        {isUpdating ? "Saving..." : "Save changes"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleCancelEdit}
-                        disabled={isUpdating}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-border/70 bg-muted/30 p-6 text-sm text-muted-foreground">
-                    Pick a candidate from the table to review their profile,
-                    update details, or resend information.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Card className="border border-dashed border-border/70 bg-muted/20 shadow-none">
-              <CardHeader>
-                <CardTitle className="text-base">Bulk upload tips</CardTitle>
-                <CardDescription>
-                  Format your CSV with columns in this order:{" "}
-                  <code>firstName,lastName,emailAddress,mobileNumber</code>.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-start gap-3">
-                  <Mail className="mt-0.5 h-4 w-4" />
-                  <p>
-                    We recommend using corporate email addresses to avoid
-                    duplicate candidate records.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Phone className="mt-0.5 h-4 w-4" />
-                  <p>
-                    Include phone numbers so you can send SMS nudges before the
-                    assessment window closes.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="border border-dashed border-border/70 bg-muted/20 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">Bulk upload tips</CardTitle>
+                  <CardDescription>
+                    Format your CSV with columns in this order:{" "}
+                    <code>firstName,lastName, emailAddress, mobileNumber</code>.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-3">
+                    <Mail className="mt-0.5 h-8 w-8" />
+                    <p>
+                      We recommend using corporate email addresses to avoid
+                      duplicate candidate records.
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Phone className="mt-0.5 h-8 w-8" />
+                    <p>
+                      Include phone numbers so you can send SMS nudges before
+                      the assessment window closes.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>

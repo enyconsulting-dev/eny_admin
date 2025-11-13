@@ -101,7 +101,7 @@ interface Attempt {
 
 const STATUS_LABELS: Record<string, string> = {
   active: "Active",
-  completed: "Completed",
+  submitted: "Submitted",
   expired: "Expired",
   abandoned: "Abandoned",
   closed: "Closed",
@@ -124,6 +124,7 @@ const STATUS_INTENTS: Record<
   },
   closed: { variant: "outline", copy: "Attempt closed by an administrator." },
   pending: { variant: "outline", copy: "Waiting for candidate to start." },
+  submitted: { variant: "outline", copy: "Candidate has submit assessment." },
 };
 
 const AssessmentAttempts = () => {
@@ -685,10 +686,10 @@ const AssessmentAttempts = () => {
   );
   return (
     <DashboardLayout>
-      <TooltipProvider delayDuration={120}>
+      {/* <TooltipProvider delayDuration={120}> */}
         <div className="relative">
-          <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-primary/20 blur-[120px]" />
-          <div className="pointer-events-none absolute bottom-[-20%] left-0 h-72 w-72 rounded-full bg-emerald-500/15 blur-[120px]" />
+          {/* <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-primary/20 blur-[120px]" /> */}
+          {/* <div className="pointer-events-none absolute bottom-[-20%] left-0 h-72 w-72 rounded-full bg-emerald-500/15 blur-[120px]" /> */}
           <div className="relative space-y-8 p-6 animate-in fade-in-50">
             <div className="overflow-hidden rounded-3xl border border-border/60 bg-background/80 shadow-sm backdrop-blur-sm">
               <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -1026,7 +1027,7 @@ const AssessmentAttempts = () => {
                                     </p>
                                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                                       <Mail className="h-3 w-3" />
-                                      {candidateEmail}
+                                      {candidateEmail.slice(0, 14)}...
                                     </p>
                                     <p className="text-[11px] uppercase tracking-widest">
                                      {assessmentType}
@@ -1051,7 +1052,7 @@ const AssessmentAttempts = () => {
                               <TableCell className="align-top">
                                 <div className="space-y-1 text-xs text-muted-foreground">
                                   <div className="flex items-center gap-1 text-foreground">
-                                    <Clock className="h-3 w-3 text-primary" />
+                                    <Clock className="h-4 w-4 text-primary" />
                                     {startedRelative
                                       ? `Started ${startedRelative}`
                                       : "Not started yet"}
@@ -1134,7 +1135,7 @@ const AssessmentAttempts = () => {
             </Card>
           </div>
         </div>
-      </TooltipProvider>
+      {/* </TooltipProvider> */}
     </DashboardLayout>
   );
 };
