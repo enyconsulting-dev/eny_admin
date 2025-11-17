@@ -63,6 +63,7 @@ const JobUsers = () => {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "job_seeker" | "employer">("all");
 
   const {
     data: usersData,
@@ -143,9 +144,10 @@ const JobUsers = () => {
         !query ||
         fullName.includes(query) ||
         email.includes(query);
-      return matchesQuery;
+      const matchesType = filterType === "all" || user.accountType === filterType;
+      return matchesQuery && matchesType;
     });
-  }, [users, searchTerm]);
+  }, [users, searchTerm, filterType]);
 
   const totalUsers = users.length;
   const jobSeekers = users.filter((user) => user.accountType === "job_seeker").length;
@@ -272,6 +274,29 @@ const JobUsers = () => {
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <CardTitle>User roster</CardTitle>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+                <div className="flex gap-2">
+                  <Button
+                    variant={filterType === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterType("all")}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={filterType === "job_seeker" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterType("job_seeker")}
+                  >
+                    Job Seekers
+                  </Button>
+                  <Button
+                    variant={filterType === "employer" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterType("employer")}
+                  >
+                    Employers
+                  </Button>
+                </div>
                 <div className="relative w-full md:w-64">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -313,10 +338,10 @@ const JobUsers = () => {
                 <Users className="h-8 w-8 text-muted-foreground" />
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-foreground">
-                    No users match your search
+                    No users match your search{filterType !== "all" ? ` and filter (${filterType === "job_seeker" ? "Job Seekers" : "Employers"})` : ""}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Adjust your search or check back later.
+                    Adjust your search or filter and check back later.
                   </p>
                 </div>
               </div>
