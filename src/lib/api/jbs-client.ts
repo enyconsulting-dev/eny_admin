@@ -3,7 +3,7 @@ import { store } from "@/store";
 const BASE_URL =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3010/v1"
-    : "http://34.229.143.124:3010/v1";
+    : "https://api.enoeka.shop/v1";
 
 const getAuthHeaders = () => {
   const state = store.getState();
