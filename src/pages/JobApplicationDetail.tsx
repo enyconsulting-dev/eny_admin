@@ -82,7 +82,18 @@ interface JobApplication {
     valueOptions: string[];
     questionLabel: string;
   }[];
-  status: "Submitted" | "Viewed" | "NoteAdded" | "StageChanged" | "InterviewScheduled" | "InterviewCompleted" | "OfferMade" | "OfferAccepted" | "Rejected" | "Withdrawn" | "UnderReview";
+  status:
+    | "Submitted"
+    | "Viewed"
+    | "NoteAdded"
+    | "StageChanged"
+    | "InterviewScheduled"
+    | "InterviewCompleted"
+    | "OfferMade"
+    | "OfferAccepted"
+    | "Rejected"
+    | "Withdrawn"
+    | "UnderReview";
   source: string;
   notes: string[];
   timeline: {
@@ -115,7 +126,7 @@ const JobApplicationDetail = () => {
 
   const application: JobApplication | undefined = applicationData?.data;
 
-  console.log(application)
+  console.log(application);
 
   if (applicationLoading) {
     return (
@@ -139,7 +150,8 @@ const JobApplicationDetail = () => {
           <div className="text-center">
             <h2 className="text-xl font-semibold">Application not found</h2>
             <p className="text-muted-foreground">
-              The job application you're looking for doesn't exist or has been removed.
+              The job application you're looking for doesn't exist or has been
+              removed.
             </p>
           </div>
           <Button onClick={() => navigate("/jobs/applications")}>
@@ -150,14 +162,29 @@ const JobApplicationDetail = () => {
     );
   }
 
-  const appliedAt = application.submittedAt ? format(new Date(application.submittedAt), "PPP") : "Unknown";
-  const updatedAt = application.updatedAt ? format(new Date(application.updatedAt), "PPP") : "Unknown";
-  const appliedRelative = application.submittedAt ? formatDistanceToNow(new Date(application.submittedAt), { addSuffix: true }) : null;
-  const updatedRelative = application.updatedAt ? formatDistanceToNow(new Date(application.updatedAt), { addSuffix: true }) : null;
+  const appliedAt = application.submittedAt
+    ? format(new Date(application.submittedAt), "PPP")
+    : "Unknown";
+  const updatedAt = application.updatedAt
+    ? format(new Date(application.updatedAt), "PPP")
+    : "Unknown";
+  const appliedRelative = application.submittedAt
+    ? formatDistanceToNow(new Date(application.submittedAt), {
+        addSuffix: true,
+      })
+    : null;
+  const updatedRelative = application.updatedAt
+    ? formatDistanceToNow(new Date(application.updatedAt), { addSuffix: true })
+    : null;
 
-  const applicantName = application.jobSeekerId?.jobSeekerProfile?.fullName || "Unknown Applicant";
+  const applicantName =
+    application.jobSeekerId?.jobSeekerProfile?.fullName || "Unknown Applicant";
   const initials = application.jobSeekerId?.jobSeekerProfile?.fullName
-    ? application.jobSeekerId.jobSeekerProfile.fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+    ? application.jobSeekerId.jobSeekerProfile.fullName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
     : "U";
 
   const quickStats = [
@@ -189,19 +216,22 @@ const JobApplicationDetail = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      "Submitted": { variant: "secondary" as const, icon: FileText },
-      "Viewed": { variant: "default" as const, icon: Eye },
-      "NoteAdded": { variant: "outline" as const, icon: FileText },
-      "StageChanged": { variant: "outline" as const, icon: UserCheck },
-      "InterviewScheduled": { variant: "default" as const, icon: Calendar },
-      "InterviewCompleted": { variant: "default" as const, icon: CheckCircle },
-      "OfferMade": { variant: "default" as const, icon: Briefcase },
-      "OfferAccepted": { variant: "default" as const, icon: CheckCircle },
-      "Rejected": { variant: "destructive" as const, icon: XCircle },
-      "Withdrawn": { variant: "secondary" as const, icon: XCircle },
+      Submitted: { variant: "secondary" as const, icon: FileText },
+      Viewed: { variant: "default" as const, icon: Eye },
+      NoteAdded: { variant: "outline" as const, icon: FileText },
+      StageChanged: { variant: "outline" as const, icon: UserCheck },
+      InterviewScheduled: { variant: "default" as const, icon: Calendar },
+      InterviewCompleted: { variant: "default" as const, icon: CheckCircle },
+      OfferMade: { variant: "default" as const, icon: Briefcase },
+      OfferAccepted: { variant: "default" as const, icon: CheckCircle },
+      Rejected: { variant: "destructive" as const, icon: XCircle },
+      Withdrawn: { variant: "secondary" as const, icon: XCircle },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: "outline" as const, icon: FileText };
+    const config = statusConfig[status as keyof typeof statusConfig] || {
+      variant: "outline" as const,
+      icon: FileText,
+    };
     const Icon = config.icon;
 
     return (
@@ -214,50 +244,55 @@ const JobApplicationDetail = () => {
 
   function getStatusIcon(status: string) {
     const icons = {
-      "Submitted": FileText,
-      "Viewed": Eye,
-      "NoteAdded": FileText,
-      "StageChanged": UserCheck,
-      "InterviewScheduled": Calendar,
-      "InterviewCompleted": CheckCircle,
-      "OfferMade": Briefcase,
-      "OfferAccepted": CheckCircle,
-      "Rejected": XCircle,
-      "Withdrawn": XCircle,
+      Submitted: FileText,
+      Viewed: Eye,
+      NoteAdded: FileText,
+      StageChanged: UserCheck,
+      InterviewScheduled: Calendar,
+      InterviewCompleted: CheckCircle,
+      OfferMade: Briefcase,
+      OfferAccepted: CheckCircle,
+      Rejected: XCircle,
+      Withdrawn: XCircle,
     };
     return icons[status as keyof typeof icons] || FileText;
   }
 
   function getStatusAccent(status: string) {
     const accents = {
-      "Submitted": "bg-gray-500/10 text-gray-500",
-      "Viewed": "bg-blue-500/10 text-blue-500",
-      "NoteAdded": "bg-yellow-500/10 text-yellow-500",
-      "StageChanged": "bg-purple-500/10 text-purple-500",
-      "InterviewScheduled": "bg-green-500/10 text-green-500",
-      "InterviewCompleted": "bg-emerald-500/10 text-emerald-500",
-      "OfferMade": "bg-indigo-500/10 text-indigo-500",
-      "OfferAccepted": "bg-teal-500/10 text-teal-500",
-      "Rejected": "bg-red-500/10 text-red-500",
-      "Withdrawn": "bg-orange-500/10 text-orange-500",
+      Submitted: "bg-gray-500/10 text-gray-500",
+      Viewed: "bg-blue-500/10 text-blue-500",
+      NoteAdded: "bg-yellow-500/10 text-yellow-500",
+      StageChanged: "bg-purple-500/10 text-purple-500",
+      InterviewScheduled: "bg-green-500/10 text-green-500",
+      InterviewCompleted: "bg-emerald-500/10 text-emerald-500",
+      OfferMade: "bg-indigo-500/10 text-indigo-500",
+      OfferAccepted: "bg-teal-500/10 text-teal-500",
+      Rejected: "bg-red-500/10 text-red-500",
+      Withdrawn: "bg-orange-500/10 text-orange-500",
     };
-    return accents[status as keyof typeof accents] || "bg-gray-500/10 text-gray-500";
+    return (
+      accents[status as keyof typeof accents] || "bg-gray-500/10 text-gray-500"
+    );
   }
 
   function getStatusDescription(status: string) {
     const descriptions = {
-      "Submitted": "Application submitted, awaiting review",
-      "Viewed": "Application has been reviewed",
-      "NoteAdded": "Notes have been added to the application",
-      "StageChanged": "Application moved to a different stage",
-      "InterviewScheduled": "Interview has been scheduled",
-      "InterviewCompleted": "Interview process completed",
-      "OfferMade": "Job offer has been extended",
-      "OfferAccepted": "Job offer accepted by candidate",
-      "Rejected": "Application was not successful",
-      "Withdrawn": "Application withdrawn by candidate",
+      Submitted: "Application submitted, awaiting review",
+      Viewed: "Application has been reviewed",
+      NoteAdded: "Notes have been added to the application",
+      StageChanged: "Application moved to a different stage",
+      InterviewScheduled: "Interview has been scheduled",
+      InterviewCompleted: "Interview process completed",
+      OfferMade: "Job offer has been extended",
+      OfferAccepted: "Job offer accepted by candidate",
+      Rejected: "Application was not successful",
+      Withdrawn: "Application withdrawn by candidate",
     };
-    return descriptions[status as keyof typeof descriptions] || "Status description unavailable";
+    return (
+      descriptions[status as keyof typeof descriptions] ||
+      "Status description unavailable"
+    );
   }
 
   return (
@@ -302,7 +337,11 @@ const JobApplicationDetail = () => {
                         {applicantName}
                       </h1>
                       <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-                        Applied for: {application.jobPostingId?.title || "Unknown Position"} at {application.companyId?.employerProfile?.name || "Unknown Company"}
+                        Applied for:{" "}
+                        {application.jobPostingId?.title || "Unknown Position"}{" "}
+                        at{" "}
+                        {application.companyId?.employerProfile?.name ||
+                          "Unknown Company"}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -319,8 +358,14 @@ const JobApplicationDetail = () => {
                 </div>
                 <div className="w-full max-w-xs rounded-2xl border border-border/60 bg-background/80 p-4 text-sm shadow-sm">
                   <div className="flex items-center gap-3">
-                    <span className={`flex h-10 w-10 items-center justify-center rounded-full ${getStatusAccent(application.status)}`}>
-                      {React.createElement(getStatusIcon(application.status), { className: "h-5 w-5" })}
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-full ${getStatusAccent(
+                        application.status
+                      )}`}
+                    >
+                      {React.createElement(getStatusIcon(application.status), {
+                        className: "h-5 w-5",
+                      })}
                     </span>
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -349,15 +394,21 @@ const JobApplicationDetail = () => {
                 >
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <CardContent className="relative space-y-3 p-5">
-                    <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${stat.accent}`}>
+                    <span
+                      className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${stat.accent}`}
+                    >
                       <Icon className="h-5 w-5" />
                     </span>
                     <div className="space-y-1">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80">
                         {stat.label}
                       </p>
-                      <p className="text-lg font-semibold text-foreground">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground">{stat.hint}</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        {stat.value}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {stat.hint}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -394,15 +445,28 @@ const JobApplicationDetail = () => {
                   <CardContent>
                     <div className="rounded-2xl border border-border/60 bg-muted/30 p-4">
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">{application.resume.name}</p>
-                        <p className="text-xs text-muted-foreground">Type: {application.resume.mimeType}</p>
-                        <p className="text-xs text-muted-foreground">Size: {(application.resume.size / 1024).toFixed(1)} KB</p>
+                        <p className="text-sm font-medium">
+                          {application.resume.name}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          Uploaded: {new Date(application.resume.uploadedAt).toLocaleDateString()}
+                          Type: {application.resume.mimeType}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Size: {(application.resume.size / 1024).toFixed(1)} KB
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Uploaded:{" "}
+                          {new Date(
+                            application.resume.uploadedAt
+                          ).toLocaleDateString()}
                         </p>
                         {application.resume.url && (
-                          <a href={application.resume.url} target="_blank" rel="noopener noreferrer"
-                             className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+                          <a
+                            href={application.resume.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                          >
                             <span>📄</span>
                             View Resume
                           </a>
@@ -424,23 +488,41 @@ const JobApplicationDetail = () => {
                   <CardContent>
                     <div className="space-y-4">
                       {application.answers.map((answer, index) => (
-                        <div key={index} className="rounded-2xl border border-border/60 bg-muted/30 p-4">
+                        <div
+                          key={index}
+                          className="rounded-2xl border border-border/60 bg-muted/30 p-4"
+                        >
                           <div className="space-y-2">
-                            <h4 className="font-semibold text-foreground">{answer.questionLabel}</h4>
-                            <p className="text-sm text-muted-foreground">Type: {answer.responseType}</p>
+                            <h4 className="font-semibold text-foreground">
+                              {answer.questionLabel}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              Type: {answer.responseType}
+                            </p>
                             <div className="rounded-lg border border-border/60 bg-background/50 px-3 py-2">
-                              <p className="text-sm text-foreground whitespace-pre-wrap">{answer.valueText}</p>
+                              <p className="text-sm text-foreground whitespace-pre-wrap">
+                                {answer.valueText}
+                              </p>
                             </div>
-                            {answer.valueOptions && answer.valueOptions.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Selected Options</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {answer.valueOptions.map((option, i) => (
-                                    <Badge key={i} variant="secondary" className="text-xs">{option}</Badge>
-                                  ))}
+                            {answer.valueOptions &&
+                              answer.valueOptions.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                                    Selected Options
+                                  </p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {answer.valueOptions.map((option, i) => (
+                                      <Badge
+                                        key={i}
+                                        variant="secondary"
+                                        className="text-xs"
+                                      >
+                                        {option}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
                           </div>
                         </div>
                       ))}
@@ -460,7 +542,10 @@ const JobApplicationDetail = () => {
                   <CardContent>
                     <div className="space-y-3">
                       {application.notes.map((note, index) => (
-                        <div key={index} className="rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+                        <div
+                          key={index}
+                          className="rounded-2xl border border-border/60 bg-muted/30 px-3 py-2"
+                        >
                           <p className="text-sm text-foreground">{note}</p>
                         </div>
                       ))}
@@ -480,16 +565,23 @@ const JobApplicationDetail = () => {
                   <CardContent>
                     <div className="space-y-4">
                       {application.timeline.map((event, index) => (
-                        <div key={index} className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3"
+                        >
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                             <span className="text-xs font-medium text-primary">
                               {event.type.charAt(0)}
                             </span>
                           </div>
                           <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium text-foreground">{event.type}</p>
+                            <p className="text-sm font-medium text-foreground">
+                              {event.type}
+                            </p>
                             {event.note && (
-                              <p className="text-sm text-muted-foreground">{event.note}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {event.note}
+                              </p>
                             )}
                             <p className="text-xs text-muted-foreground">
                               {new Date(event.at).toLocaleString()}
@@ -503,27 +595,33 @@ const JobApplicationDetail = () => {
                 </Card>
               )}
 
-              {application.portfolioLinks && application.portfolioLinks.length > 0 && (
-                <Card className="border border-border/60 bg-background/80 shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Portfolio Links</CardTitle>
-                    <CardDescription>
-                      External portfolio and work samples.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {application.portfolioLinks.map((link, index) => (
-                        <a key={index} href={link} target="_blank" rel="noopener noreferrer"
-                           className="flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-primary hover:bg-muted/50 transition-colors">
-                          <span>🔗</span>
-                          <span className="truncate">{link}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {application.portfolioLinks &&
+                application.portfolioLinks.length > 0 && (
+                  <Card className="border border-border/60 bg-background/80 shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Portfolio Links</CardTitle>
+                      <CardDescription>
+                        External portfolio and work samples.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {application.portfolioLinks.map((link, index) => (
+                          <a
+                            key={index}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-primary hover:bg-muted/50 transition-colors"
+                          >
+                            <span>🔗</span>
+                            <span className="truncate">{link}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
               <Card className="border border-border/60 bg-background/80 shadow-sm">
                 <CardHeader>
@@ -549,7 +647,9 @@ const JobApplicationDetail = () => {
                       </label>
                       <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2 text-sm">
                         <BadgeCheck className="h-4 w-4 text-primary" />
-                        <span>{application.companyId?.employerProfile?.name}</span>
+                        <span>
+                          {application.companyId?.employerProfile?.name}
+                        </span>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -558,7 +658,11 @@ const JobApplicationDetail = () => {
                       </label>
                       <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2 text-sm">
                         <CalendarClock className="h-4 w-4 text-primary" />
-                        <span>{application.postingSnapshot.location.city}, {application.postingSnapshot.location.state}, {application.postingSnapshot.location.country}</span>
+                        <span>
+                          {application.postingSnapshot.location.city},{" "}
+                          {application.postingSnapshot.location.state},{" "}
+                          {application.postingSnapshot.location.country}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -584,98 +688,125 @@ const JobApplicationDetail = () => {
               </Card>
             </div>
 
-            <div className="space-y-6">
-              <Card className="border border-border/60 bg-background/80 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Application details</CardTitle>
-                  <CardDescription>Metadata and identifiers.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
-                    <Hash className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Application ID
-                      </p>
-                      <p className="font-mono text-sm text-foreground">{application._id}</p>
+            <div className="relative space-y-6">
+              <div className="sticky top-6 space-y-6">
+                <Card className="border border-border/60 bg-background/80 shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Application details</CardTitle>
+                    <CardDescription>Metadata and identifiers.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+                      <Hash className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Application ID
+                        </p>
+                        <p className="font-mono text-sm text-foreground">
+                          {application._id}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
-                    <CalendarClock className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Applied
-                      </p>
-                      <p className="text-sm text-foreground">{appliedAt}</p>
-                      <p className="text-xs text-muted-foreground">{appliedRelative ?? "—"}</p>
+                    <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+                      <CalendarClock className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Applied
+                        </p>
+                        <p className="text-sm text-foreground">{appliedAt}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {appliedRelative ?? "—"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Last updated
-                      </p>
-                      <p className="text-sm text-foreground">{updatedAt}</p>
-                      <p className="text-xs text-muted-foreground">{updatedRelative ?? "—"}</p>
+                    <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Last updated
+                        </p>
+                        <p className="text-sm text-foreground">{updatedAt}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {updatedRelative ?? "—"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              <Card className="border border-border/60 bg-background/80 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Applicant info</CardTitle>
-                  <CardDescription>Contact and location details.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="text-xs">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {application.jobSeekerId?.jobSeekerProfile?.fullName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {application.jobSeekerId?.email}
-                      </p>
+                <Card className="border border-border/60 bg-background/80 shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Applicant info</CardTitle>
+                    <CardDescription>
+                      Contact and location details.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="text-xs">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {application.jobSeekerId?.jobSeekerProfile?.fullName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {application.jobSeekerId?.email}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              <Card className="border border-border/60 bg-background/80 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Application management</CardTitle>
-                  <CardDescription>Guidelines for handling applications.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 text-xs text-muted-foreground">
-                  <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Review process</p>
-                      <p>Ensure fair and consistent evaluation of all applications.</p>
+                <Card className="border border-border/60 bg-background/80 shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Application management</CardTitle>
+                    <CardDescription>
+                      Guidelines for handling applications.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-xs text-muted-foreground">
+                    <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Review process
+                        </p>
+                        <p>
+                          Ensure fair and consistent evaluation of all
+                          applications.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
-                    <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Communication</p>
-                      <p>Keep applicants informed throughout the hiring process.</p>
+                    <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+                      <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Communication
+                        </p>
+                        <p>
+                          Keep applicants informed throughout the hiring
+                          process.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
-                    <FileText className="mt-0.5 h-4 w-4 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Documentation</p>
-                      <p>Maintain detailed records of application progress and decisions.</p>
+                    <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 px-3 py-2">
+                      <FileText className="mt-0.5 h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Documentation
+                        </p>
+                        <p>
+                          Maintain detailed records of application progress and
+                          decisions.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
