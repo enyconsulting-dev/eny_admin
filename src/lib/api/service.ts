@@ -330,4 +330,155 @@ export const appService = {
       throw error;
     }
   },
+  // API Keys management
+  getApiKeys: () => {
+    try {
+      return apiClient.get("/api-keys");
+    } catch (error) {
+      throw error;
+    }
+  },
+  getApiKeyById: (id: string) => {
+    try {
+      return apiClient.get(`/api-keys/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  createApiKey: (data: {
+    name: string;
+    description?: string;
+    expiresAt?: string;
+    allowedOrigins?: string[];
+    rateLimit?: number;
+    permissions?: string[];
+  }) => {
+    try {
+      return apiClient.post("/api-keys", data);
+    } catch (error) {
+      throw error;
+    }
+  },
+  updateApiKey: (id: string, data: {
+    name?: string;
+    description?: string;
+    expiresAt?: string;
+    allowedOrigins?: string[];
+    rateLimit?: number;
+    permissions?: string[];
+  }) => {
+    try {
+      return apiClient.patch(`/api-keys/${id}`, data);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deleteApiKey: (id: string) => {
+    try {
+      return apiClient.delete(`/api-keys/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  activateApiKey: (id: string) => {
+    try {
+      return apiClient.patch(`/api-keys/${id}/reactivate`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deactivateApiKey: (id: string) => {
+    try {
+      return apiClient.patch(`/api-keys/${id}/deactivate`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  getApiKeyStats: (id: string) => {
+    try {
+      return apiClient.get(`/api-keys/${id}/stats`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Subscription Plans
+  getSubscriptionPlans: () => {
+    try {
+      return jbsApiClient.get("/subscriptions/plans");
+    } catch (error) {
+      throw error;
+    }
+  },
+  getSubscriptionPlanById: (id: string) => {
+    try {
+      return jbsApiClient.get(`/subscriptions/plans/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  createSubscriptionPlan: (data: any) => {
+    try {
+      return jbsApiClient.post("/subscriptions/plans", data);
+    } catch (error) {
+      throw error;
+    }
+  },
+  updateSubscriptionPlan: (id: string, data: any) => {
+    try {
+      return jbsApiClient.patch(`/subscriptions/plans/${id}`, data);
+    } catch (error) {
+      throw error;
+    }
+  },
+  deleteSubscriptionPlan: (id: string) => {
+    try {
+      return jbsApiClient.delete(`/subscriptions/plans/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // User Subscriptions
+  getUserSubscriptionStatistics: () => {
+    try {
+      return jbsApiClient.get("/admin/jbs/subscriptions/statistics");
+    } catch (error) {
+      throw error;
+    }
+  },
+  getUserSubscriptions: (page: number = 1, limit: number = 10) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/subscriptions?page=${page}&limit=${limit}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  getUserSubscriptionById: (id: string) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/subscriptions/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  updateUserSubscriptionStatus: (id: string, data: { status: string }) => {
+    try {
+      return jbsApiClient.patch(`/admin/jbs/subscriptions/${id}`, data);
+    } catch (error) {
+      throw error;
+    }
+  },
+  getUserSubscriptionsByUserId: (userId: string, page: number = 1, limit: number = 10) => {
+    try {
+      return jbsApiClient.get(`/admin/jbs/subscriptions/user/${userId}?page=${page}&limit=${limit}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Push Notifications
+  sendPushNotificationToUser: (data: { userId: string; message: string }) => {
+    try {
+      return jbsApiClient.post("/admin/jbs/push-notifications/send-to-user", data);
+    } catch (error) {
+      throw error;
+    }
+  },
 };

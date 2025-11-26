@@ -8,6 +8,7 @@ import {
   Users,
   Briefcase,
   FileText,
+  CreditCard,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,22 @@ const JobPlatform = () => {
       icon: FileText,
       href: "/jobs/applications",
     },
+    {
+      key: "subscriptions",
+      label: "Subscription plans",
+      value: 0,
+      description: "Manage subscription plans.",
+      icon: CreditCard,
+      href: "/jobs/subscriptions",
+    },
+    {
+      key: "userSubscriptions",
+      label: "User subscriptions",
+      value: 0,
+      description: "Monitor active user subscriptions.",
+      icon: Users,
+      href: "/jobs/user-subscriptions",
+    },
   ];
 
   return (
@@ -133,7 +150,7 @@ const JobPlatform = () => {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {summaryCards.map((summary) => {
             const Icon = summary.icon;
             return (
