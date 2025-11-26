@@ -19,6 +19,9 @@ import AttemptDetail from "./pages/AttemptDetail";
 import AssessmentsList from "./pages/AssessmentsList";
 import Admins from "./pages/Admins";
 import AdminDetail from "./pages/AdminDetail";
+import ApiKeys from "./pages/ApiKeys";
+import CreateApiKey from "./pages/CreateApiKey";
+import ApiKeyDetail from "./pages/ApiKeyDetail";
 import JobPlatform from "./pages/JobPlatform";
 import JobUsers from "./pages/JobUsers";
 import JobUserDetail from "./pages/JobUserDetailExpanded";
@@ -26,6 +29,10 @@ import JobPostings from "./pages/JobPostings";
 import JobPostingDetail from "./pages/JobPostingDetail";
 import JobApplications from "./pages/JobApplications";
 import JobApplicationDetail from "./pages/JobApplicationDetail";
+import Subscriptions from "./pages/Subscriptions";
+import CreateSubscription from "./pages/CreateSubscription";
+import SubscriptionDetail from "./pages/SubscriptionDetail";
+import UserSubscriptions from "./pages/UserSubscriptions";
 import SetPassword from "./pages/SetPassword";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -64,6 +71,9 @@ const App = () => (
                 <Route path="/assessments/attempts/:id" element={<ProtectedRoute><AttemptDetail /></ProtectedRoute>} />
                 <Route path="/admins" element={<ProtectedRoute><Admins /></ProtectedRoute>} />
                 <Route path="/admins/:id" element={<ProtectedRoute><AdminDetail /></ProtectedRoute>} />
+                <Route path="/api-keys" element={<ProtectedRoute><ApiKeys /></ProtectedRoute>} />
+                <Route path="/api-keys/create" element={<ProtectedRoute><CreateApiKey /></ProtectedRoute>} />
+                <Route path="/api-keys/:id" element={<ProtectedRoute><ApiKeyDetail /></ProtectedRoute>} />
                 <Route path="/jobs" element={<ProtectedRoute><JobPlatform /></ProtectedRoute>} />
                 <Route path="/jobs/users" element={<ProtectedRoute><JobUsers /></ProtectedRoute>} />
                 <Route path="/jobs/users/:id" element={<ProtectedRoute><JobUserDetail /></ProtectedRoute>} />
@@ -71,6 +81,10 @@ const App = () => (
                 <Route path="/jobs/postings/:id" element={<ProtectedRoute><JobPostingDetail /></ProtectedRoute>} />
                 <Route path="/jobs/applications" element={<ProtectedRoute><JobApplications /></ProtectedRoute>} />
                 <Route path="/jobs/applications/:id" element={<ProtectedRoute><JobApplicationDetail /></ProtectedRoute>} />
+                <Route path="/jobs/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+                <Route path="/jobs/subscriptions/create" element={<ProtectedRoute><CreateSubscription /></ProtectedRoute>} />
+                <Route path="/jobs/subscriptions/:id" element={<ProtectedRoute><SubscriptionDetail /></ProtectedRoute>} />
+                <Route path="/jobs/user-subscriptions" element={<ProtectedRoute><UserSubscriptions /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
