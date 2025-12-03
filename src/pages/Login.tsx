@@ -1,22 +1,16 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Calendar } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { appService } from "@/lib/api/service";
 import { loginSuccess } from "@/store/authSlice";
 import { RootState } from "@/store";
+import AnimatedFace from "@/components/AnimatedFace";
 
 const Login = () => {
   const queryClient = useQueryClient();
@@ -26,6 +20,8 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [isPasswordHovered, setIsPasswordHovered] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -74,76 +70,91 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
-              <Calendar className="h-8 w-8 text-white" />
-            </div>
-          </div>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+        {/* Animated Face */}
+        <div className="flex justify-center mb-8">
+          <AnimatedFace 
+            isPasswordFocused={isPasswordFocused}
+            isPasswordHovered={isPasswordHovered}
+          />
         </div>
 
-        <Card className="shadow-elevated">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription>
-              Enter your credentials to access the admin dashboard
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@enyconsulting.ca"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Welcome Back!</h2>
+        
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <Label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="admin@enyconsulting.ca"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Password
+            </Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => {
+                  setIsPasswordFocused(true);
+                  setIsPasswordHovered(false);
+                }}
+                onBlur={() => {
+                  setIsPasswordFocused(false);
+                  setIsPasswordHovered(false);
+                }}
+                onMouseEnter={() => setIsPasswordHovered(true)}
+                onMouseLeave={() => setIsPasswordHovered(false)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition pr-12"
+              />
               <Button
-                type="submit"
-                className="w-full bg-gradient-primary hover:shadow-primary"
-                disabled={isLoading}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                onClick={() => setShowPassword(!showPassword)}
               >
-                {isLoading ? "Signing in..." : "Sign in"}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </Button>
-            </form>
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Demo credentials: any email + any password
-              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          >
+            {isLoading ? "Signing in..." : "Sign In"}
+          </Button>
+        </form>
+
+        <style>{`
+          @keyframes blink {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.1); }
+          }
+          .animate-blink {
+            animation: blink 0.3s ease-in-out;
+          }
+        `}</style>
       </div>
     </div>
   );
