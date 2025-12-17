@@ -286,7 +286,7 @@ export default function QuestionCard({
             </div>
             <div className="space-y-1">
               <CardTitle className="text-lg font-semibold leading-tight text-foreground">
-                {local.prompt?.trim() ? local.prompt.trim() : "Draft question"}
+                {local.prompt?.trim() ? `${local.prompt.slice(0, 70).trim()}....` : "Draft question"}
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">{typeInfo.helper}</CardDescription>
             </div>

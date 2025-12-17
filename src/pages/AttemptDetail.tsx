@@ -11,6 +11,7 @@ import {
   HeadingLevel,
   AlignmentType,
   WidthType,
+  ExternalHyperlink,
 } from "docx";
 import {
   AlertCircle,
@@ -133,6 +134,7 @@ const AttemptDetail = () => {
   const navigate = useNavigate();
   const [eventsPage, setEventsPage] = useState(1);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
 
   const {
     data: attemptData,
@@ -180,11 +182,13 @@ const AttemptDetail = () => {
       })
     );
 
+    // Add blank paragraph after title
+    content.push(new Paragraph({ text: "" }));
+
     // Assessment Info
     content.push(
       new Paragraph({
         text: `Assessment: ${attempt.assessmentId.title}`,
-        heading: HeadingLevel.HEADING_1,
       })
     );
 
@@ -193,6 +197,9 @@ const AttemptDetail = () => {
         text: `Description: ${attempt.assessmentId.description}`,
       })
     );
+
+    // Add blank paragraph
+    content.push(new Paragraph({ text: "" }));
 
     // Candidate Info
     content.push(
@@ -213,6 +220,9 @@ const AttemptDetail = () => {
         text: `Email: ${attempt.userId.emailAddress}`,
       })
     );
+
+    // Add blank paragraph
+    content.push(new Paragraph({ text: "" }));
 
     // Attempt Info
     content.push(
@@ -248,21 +258,50 @@ const AttemptDetail = () => {
       );
     }
 
-    // Answers Section
+    // Add blank paragraph
+    content.push(new Paragraph({ text: "" }));
+
+    // Answers Section - Bold and Underlined
     content.push(
       new Paragraph({
-        text: "Answers",
-        heading: HeadingLevel.HEADING_2,
+        children: [
+          new TextRun({
+            text: "Answers",
+            bold: true,
+            underline: {},
+          }),
+        ],
       })
     );
 
+    // Add blank paragraph
+    content.push(new Paragraph({ text: "" }));
+
     attempt.answers.forEach((answer, index) => {
+      // Question prompt - Handle newlines without bold
+      const questionLines = answer.questionId.prompt.split('\n');
+      const questionChildren = questionLines.flatMap((line, i) => {
+        const textRun = new TextRun({
+          text: line,
+        });
+        if (i < questionLines.length - 1) {
+          return [textRun, new TextRun({ text: "", break: 1 })];
+        }
+        return [textRun];
+      });
+
       content.push(
         new Paragraph({
-          text: `Question ${index + 1}: ${answer.questionId.prompt}`,
-          heading: HeadingLevel.HEADING_3,
+          children: [
+            new TextRun({
+              text: `Question ${index + 1}: `,
+            }),
+            ...questionChildren,
+          ],
         })
       );
+
+      content.push(new Paragraph({ text: "" }));
 
       content.push(
         new Paragraph({
@@ -276,9 +315,23 @@ const AttemptDetail = () => {
         })
       );
 
+      content.push(new Paragraph({ text: "" }));
+
       content.push(
         new Paragraph({
-          text: `Answered: ${format(new Date(answer.answeredAt), "PPP p")}`,
+          children: [
+            new TextRun({
+              text: "Candidate Response",
+              bold: true,
+              underline: {},
+            }),
+          ],
+        })
+      );
+
+      content.push(
+        new Paragraph({
+          text: `${format(new Date(answer.answeredAt), "PPP p")}`,
         })
       );
 
@@ -299,38 +352,200 @@ const AttemptDetail = () => {
       }
 
       // Handle different answer types
-      let answerText = "";
       if (answer.value === null || answer.value === undefined) {
-        answerText = "No answer";
-      } else if (typeof answer.value === "string" || typeof answer.value === "number" || typeof answer.value === "boolean") {
-        answerText = String(answer.value);
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Answer: No answer",
+                bold: true,
+              }),
+            ],
+          })
+        );
+      } else if (typeof answer.value === "string") {
+        // Handle string answers with newlines
+        const answerLines = String(answer.value).split('\n');
+        const answerChildren = answerLines.flatMap((line, i) => {
+          const textRun = new TextRun({
+            text: line,
+            bold: true,
+          });
+          if (i < answerLines.length - 1) {
+            return [textRun, new TextRun({ text: "", break: 1 })];
+          }
+          return [textRun];
+        });
+
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Answer: ",
+                bold: true,
+              }),
+            ],
+          })
+        );
+
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "",
+                bold: true,
+              }),
+              ...answerChildren,
+            ],
+          })
+        );
+      } else if (typeof answer.value === "number" || typeof answer.value === "boolean") {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Answer:`,
+                bold: true,
+              }),
+            ],
+          })
+        );
+
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${String(answer.value)}`,
+                bold: true,
+              }),
+            ],
+          })
+        );
       } else if (Array.isArray(answer.value)) {
+        let answerText = "";
         if (answer.value.every(item => typeof item === "object" && item !== null && "key" in item && "text" in item)) {
           answerText = answer.value.map(item => `${item.key}: ${item.text}`).join(", ");
         } else {
           answerText = JSON.stringify(answer.value, null, 2);
         }
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Answer:`,
+                bold: true,
+              }),
+            ],
+          })
+        );
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${answerText}`,
+                bold: true,
+              }),
+            ],
+          })
+        );
       } else if (typeof answer.value === "object") {
         const obj = answer.value as Record<string, unknown>;
         const videoUrl = typeof obj["video_url"] === "string" ? (obj["video_url"] as string) : undefined;
 
         if (videoUrl && answer.questionId.type === "Video") {
           const src = /^(https?:)?\/\//i.test(videoUrl) ? videoUrl : `https://${videoUrl}`;
-          answerText = `Video Response: ${src}`;
+
+          // Create clickable link for video
+          content.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Answer: Video Response - ",
+                  bold: true,
+                }),
+                new ExternalHyperlink({
+                  children: [
+                    new TextRun({
+                      text: src,
+                      style: "Hyperlink",
+                      underline: {},
+                      color: "0000FF",
+                      bold: true,
+                    }),
+                  ],
+                  link: src,
+                }),
+              ],
+            })
+          );
         } else if ("key" in obj && "text" in obj) {
-          answerText = `${obj.key}: ${obj.text}`;
+          content.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Answer:`,
+                  bold: true,
+                }),
+              ],
+            })
+          );
+
+          content.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${obj.key}: ${obj.text}`,
+                  bold: true,
+                }),
+              ],
+            })
+          );
         } else {
-          answerText = JSON.stringify(answer.value, null, 2);
+          content.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Answer`,
+                  bold: true,
+                }),
+              ],
+            })
+          );
+
+          content.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${JSON.stringify(answer.value, null, 2)}`,
+                  bold: true,
+                }),
+              ],
+            })
+          );
         }
       } else {
-        answerText = String(answer.value);
-      }
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Answer:`,
+                bold: true,
+              }),
+            ],
+          })
+        );
 
-      content.push(
-        new Paragraph({
-          text: `Answer: ${answerText}`,
-        })
-      );
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${String(answer.value)}`,
+                bold: true,
+              }),
+            ],
+          })
+        );
+      }
 
       // Add spacing between questions
       content.push(new Paragraph({ text: "" }));
@@ -357,7 +572,7 @@ const AttemptDetail = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `attempt-${attempt._id}-answers.docx`;
+      link.download = `attempt-${attempt.userId.firstName}-${attempt.userId.lastName}-${attempt._id}-answers.docx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -401,37 +616,37 @@ const AttemptDetail = () => {
     () =>
       attempt
         ? [
-            {
-              key: "status",
-              label: "Current status",
-              value: attempt.status,
-              description:
-                statusCopy[statusKey] ?? "Attempt status is being tracked.",
-              icon: Sparkles,
-            },
-            {
-              key: "created",
-              label: "Created at",
-              value: format(new Date(attempt.createdAt), "MMM d, yyyy h:mm a"),
-              description: "When this attempt record was created.",
-              icon: CalendarClock,
-            },
-            {
-              key: "progress",
-              label: "Progress",
-              value: attempt.startedAt
-                ? attempt.endedAt
-                  ? "Completed"
-                  : "In progress"
-                : "Not started",
-              description: attempt.startedAt
-                ? attempt.endedAt
-                  ? "Candidate submitted their attempt."
-                  : "Candidate has started but not ended the attempt."
-                : "Waiting for the candidate to begin.",
-              icon: Loader2,
-            },
-          ]
+          {
+            key: "status",
+            label: "Current status",
+            value: attempt.status,
+            description:
+              statusCopy[statusKey] ?? "Attempt status is being tracked.",
+            icon: Sparkles,
+          },
+          {
+            key: "created",
+            label: "Created at",
+            value: format(new Date(attempt.createdAt), "MMM d, yyyy h:mm a"),
+            description: "When this attempt record was created.",
+            icon: CalendarClock,
+          },
+          {
+            key: "progress",
+            label: "Progress",
+            value: attempt.startedAt
+              ? attempt.endedAt
+                ? "Completed"
+                : "In progress"
+              : "Not started",
+            description: attempt.startedAt
+              ? attempt.endedAt
+                ? "Candidate submitted their attempt."
+                : "Candidate has started but not ended the attempt."
+              : "Waiting for the candidate to begin.",
+            icon: Loader2,
+          },
+        ]
         : [],
     [attempt, statusKey, statusCopy]
   );
@@ -588,9 +803,8 @@ const AttemptDetail = () => {
     }
 
     if (Array.isArray(payload)) {
-      return `Array payload (${payload.length} item${
-        payload.length === 1 ? "" : "s"
-      })`;
+      return `Array payload (${payload.length} item${payload.length === 1 ? "" : "s"
+        })`;
     }
 
     if (typeof payload === "object" && payload !== null) {
@@ -607,9 +821,8 @@ const AttemptDetail = () => {
       if (importantKey) {
         const value = recordPayload[importantKey];
         if (typeof value === "string") {
-          return `${importantKey}: ${
-            value.length > 60 ? `${value.slice(0, 57)}…` : value
-          }`;
+          return `${importantKey}: ${value.length > 60 ? `${value.slice(0, 57)}…` : value
+            }`;
         }
         if (typeof value === "number" || typeof value === "boolean") {
           return `${importantKey}: ${String(value)}`;
@@ -629,9 +842,8 @@ const AttemptDetail = () => {
             return `${key}: —`;
           }
           if (typeof value === "string") {
-            return `${key}: ${
-              value.length > 20 ? `${value.slice(0, 17)}…` : value
-            }`;
+            return `${key}: ${value.length > 20 ? `${value.slice(0, 17)}…` : value
+              }`;
           }
           if (typeof value === "number" || typeof value === "boolean") {
             return `${key}: ${String(value)}`;
@@ -689,8 +901,8 @@ const AttemptDetail = () => {
       icon === "mobile"
         ? "bg-emerald-500/10 text-emerald-500"
         : icon === "bot"
-        ? "bg-amber-500/10 text-amber-500"
-        : "bg-primary/10 text-primary";
+          ? "bg-amber-500/10 text-amber-500"
+          : "bg-primary/10 text-primary";
 
     return {
       deviceLabel,
@@ -699,6 +911,18 @@ const AttemptDetail = () => {
       accentClass,
       raw: userAgent ?? "—",
     };
+  };
+
+  const toggleQuestionExpansion = (index: number) => {
+    setExpandedQuestions((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
   };
 
   if (isError) {
@@ -828,8 +1052,6 @@ const AttemptDetail = () => {
   return (
     <DashboardLayout>
       <div className="relative">
-        <div className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-primary/15 blur-[120px]" />
-        <div className="pointer-events-none absolute bottom-[-18%] left-0 h-72 w-72 rounded-full bg-emerald-500/15 blur-[120px]" />
         <div className="relative space-y-8 p-6 animate-in fade-in-50">
           <div className="overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-background via-primary/5 to-background p-6 shadow-sm backdrop-blur-sm">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -1175,9 +1397,31 @@ const AttemptDetail = () => {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-foreground">
-                          {answer.questionId.prompt}
-                        </p>
+                        {(() => {
+                          const questionText = answer.questionId.prompt.trim();
+                          const isExpanded = expandedQuestions.has(index);
+                          const maxLength = 200;
+                          const shouldTruncate = questionText.length > maxLength;
+                          const displayText = shouldTruncate && !isExpanded
+                            ? questionText.slice(0, maxLength) + "..."
+                            : questionText;
+
+                          return (
+                            <>
+                              <p className="whitespace-pre-line leading-relaxed text-foreground">
+                                {displayText}
+                              </p>
+                              {shouldTruncate && (
+                                <button
+                                  onClick={() => toggleQuestionExpansion(index)}
+                                  className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+                                >
+                                  {isExpanded ? "Read less" : "Read more"}
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                         <div className="flex gap-3 text-xs text-muted-foreground">
                           <span className="uppercase tracking-widest">
                             Type: {answer.questionId.type}
@@ -1354,8 +1598,8 @@ const AttemptDetail = () => {
                                 meta.icon === "mobile"
                                   ? Smartphone
                                   : meta.icon === "bot"
-                                  ? Bot
-                                  : Monitor;
+                                    ? Bot
+                                    : Monitor;
                               return (
                                 <Fragment key={event._id}>
                                   <TableRow
