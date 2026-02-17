@@ -182,6 +182,7 @@ interface JobUser {
       dataProcessingAgreementAccepted: boolean;
     };
   };
+  isBasStudent?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -299,6 +300,44 @@ const JobUserDetail = () => {
     },
   });
 
+  const enableBasStudentMutation = useMutation({
+    mutationFn: () => appService.enableBasStudent(id!),
+    onSuccess: () => {
+      toast({
+        title: "BAS student enabled",
+        description: "The user now has BAS student status.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["job-user", id] });
+      queryClient.invalidateQueries({ queryKey: ["job-users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Unable to enable BAS student",
+        description: error?.message || "Try again shortly.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const disableBasStudentMutation = useMutation({
+    mutationFn: () => appService.disableBasStudent(id!),
+    onSuccess: () => {
+      toast({
+        title: "BAS student disabled",
+        description: "The user no longer has BAS student status.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["job-user", id] });
+      queryClient.invalidateQueries({ queryKey: ["job-users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Unable to disable BAS student",
+        description: error?.message || "Try again shortly.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const user: JobUser | undefined = userData?.data;
 
   const handleDelete = () => {
@@ -318,6 +357,14 @@ const JobUserDetail = () => {
 
   const handleDeactivate = () => {
     deactivateUserMutation.mutate();
+  };
+
+  const handleBasStudentToggle = (checked: boolean) => {
+    if (checked) {
+      enableBasStudentMutation.mutate();
+    } else {
+      disableBasStudentMutation.mutate();
+    }
   };
 
   if (userLoading) {
@@ -412,9 +459,11 @@ const JobUserDetail = () => {
             onDeactivate={handleDeactivate}
             onDelete={handleDelete}
             onSendNotification={() => setIsPushDialogOpen(true)}
+            onBasStudentToggle={handleBasStudentToggle}
             isActivating={activateUserMutation.isPending}
             isDeactivating={deactivateUserMutation.isPending}
             isDeleting={deleteUserMutation.isPending}
+            isTogglingBasStudent={enableBasStudentMutation.isPending || disableBasStudentMutation.isPending}
           />
 
           <QuickStatsCards stats={quickStats} />

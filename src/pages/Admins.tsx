@@ -524,7 +524,7 @@ const Admins = () => {
         <Card className="border border-border/60 shadow-sm">
           <CardHeader className="gap-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <CardTitle>Admin roster</CardTitle>
+              <CardTitle>Admin </CardTitle>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
                 <div className="relative w-full md:w-64">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -600,9 +600,9 @@ const Admins = () => {
                     const fullName = `${admin.firstName} ${admin.lastName}`.trim();
                     const createdAt = admin.createdAt
                       ? format(
-                          new Date(admin.createdAt),
-                          "MMM d, yyyy"
-                        )
+                        new Date(admin.createdAt),
+                        "MMM d, yyyy"
+                      )
                       : "Unknown";
 
                     return (

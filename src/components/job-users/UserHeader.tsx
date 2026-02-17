@@ -12,10 +12,12 @@ import {
     UserX,
     Building,
     Briefcase,
+    GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 
 interface JobUser {
     _id: string;
@@ -28,6 +30,7 @@ interface JobUser {
     employerProfile?: {
         name: string;
     };
+    isBasStudent?: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -39,9 +42,11 @@ interface UserHeaderProps {
     onDeactivate: () => void;
     onDelete: () => void;
     onSendNotification: () => void;
+    onBasStudentToggle: (checked: boolean) => void;
     isActivating: boolean;
     isDeactivating: boolean;
     isDeleting: boolean;
+    isTogglingBasStudent: boolean;
 }
 
 export const UserHeader = ({
@@ -51,9 +56,11 @@ export const UserHeader = ({
     onDeactivate,
     onDelete,
     onSendNotification,
+    onBasStudentToggle,
     isActivating,
     isDeactivating,
     isDeleting,
+    isTogglingBasStudent,
 }: UserHeaderProps) => {
     const displayName =
         user.accountType === "job_seeker"
@@ -188,8 +195,8 @@ export const UserHeader = ({
                         <div className="flex items-center gap-3">
                             <span
                                 className={`flex h-10 w-10 items-center justify-center rounded-full ${user.isAccountVerified
-                                        ? "bg-emerald-500/10 text-emerald-500"
-                                        : "bg-amber-500/10 text-amber-500"
+                                    ? "bg-emerald-500/10 text-emerald-500"
+                                    : "bg-amber-500/10 text-amber-500"
                                     }`}
                             >
                                 <StatusIcon className="h-5 w-5" />
@@ -209,6 +216,40 @@ export const UserHeader = ({
                                 : "Account requires verification to access full platform features."}
                         </p>
                     </div>
+
+                    {user.accountType === "job_seeker" && (
+                        <div className="w-full max-w-xs rounded-2xl border border-border/60 bg-background/80 p-4 text-sm shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <span
+                                    className={`flex h-10 w-10 items-center justify-center rounded-full ${user.isBasStudent
+                                            ? "bg-emerald-500/10 text-emerald-500"
+                                            : "bg-muted/30 text-muted-foreground"
+                                        }`}
+                                >
+                                    <GraduationCap className="h-5 w-5" />
+                                </span>
+                                <div className="flex-1">
+                                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                                        BAS Student
+                                    </p>
+                                    <p className="font-medium text-foreground">
+                                        {user.isBasStudent ? "Enabled" : "Disabled"}
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={user.isBasStudent || false}
+                                    onCheckedChange={onBasStudentToggle}
+                                    disabled={isTogglingBasStudent}
+                                    className="data-[state=checked]:bg-emerald-500"
+                                />
+                            </div>
+                            <p className="mt-3 text-xs text-muted-foreground">
+                                {user.isBasStudent
+                                    ? "User has BAS student status and privileges."
+                                    : "Toggle to grant BAS student status."}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

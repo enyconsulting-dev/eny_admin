@@ -12,7 +12,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <main className="flex-1 flex flex-col">
-          <header className="h-16 border-b bg-card flex items-center px-6">
+          <header className="h-16 border-b bg-card flex items-center px-6 fixed z-10 w-[calc(100%-256px)]">
             <SidebarTrigger className="mr-4" />
             <div className="flex-1">
               {(() => {
@@ -33,7 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <ThemeToggle />
           </header>
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-6 mt-16">
             {children}
           </div>
         </main>
