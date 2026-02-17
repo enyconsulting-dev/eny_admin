@@ -258,9 +258,8 @@ const AssessmentUsers = () => {
     if (!searchTerm.trim()) return users;
     const term = searchTerm.trim().toLowerCase();
     return users.filter((user) => {
-      const name = `${user.firstName || ""} ${
-        user.lastName || ""
-      }`.toLowerCase();
+      const name = `${user.firstName || ""} ${user.lastName || ""
+        }`.toLowerCase();
       const email = (user.emailAddress || user.email || "").toLowerCase();
       return name.includes(term) || email.includes(term);
     });
@@ -303,9 +302,8 @@ const AssessmentUsers = () => {
       value: `${distinctDomains || 0} domains`,
       description:
         missingEmailCount > 0
-          ? `${missingEmailCount} candidate${
-              missingEmailCount === 1 ? "" : "s"
-            } need an email.`
+          ? `${missingEmailCount} candidate${missingEmailCount === 1 ? "" : "s"
+          } need an email.`
           : "All candidates include an email address.",
       icon: Mail,
     },
@@ -367,7 +365,7 @@ const AssessmentUsers = () => {
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 Invite new candidates, keep profiles up to date, and monitor the
-                roster for this assessment.
+                events for this assessment.
               </p>
             </div>
           </div>
@@ -506,7 +504,7 @@ const AssessmentUsers = () => {
           <Card className="border border-border/60 shadow-sm">
             <CardHeader className="gap-6">
               <div>
-                <CardTitle>Manage roster</CardTitle>
+                <CardTitle>Manage </CardTitle>
                 <CardDescription>
                   Search, filter, or bulk upload candidates. Select a row to
                   fine-tune the candidate profile.
@@ -607,9 +605,9 @@ const AssessmentUsers = () => {
                         const profileStatus = user.mobileNumber
                           ? { label: "Complete", variant: "secondary" as const }
                           : {
-                              label: "Needs phone",
-                              variant: "outline" as const,
-                            };
+                            label: "Needs phone",
+                            variant: "outline" as const,
+                          };
                         const email = user.emailAddress || user.email || "—";
                         const phone = user.mobileNumber || "—";
                         const isActiveRow = editingUserId === userId;
@@ -617,9 +615,8 @@ const AssessmentUsers = () => {
                         return (
                           <TableRow
                             key={userId}
-                            className={`transition-colors hover:bg-muted/50 ${
-                              isActiveRow ? "bg-primary/5" : ""
-                            }`}
+                            className={`transition-colors hover:bg-muted/50 ${isActiveRow ? "bg-primary/5" : ""
+                              }`}
                           >
                             <TableCell className="align-top">
                               <div className="flex flex-col gap-1">
@@ -741,7 +738,7 @@ const AssessmentUsers = () => {
                       {currentEditingName && (
                         <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-sm">
                           Managing:{" "}{currentEditingName}{" "}
-                         
+
                           {editForm.emailAddress ? (
                             <>
                               {editForm.emailAddress}

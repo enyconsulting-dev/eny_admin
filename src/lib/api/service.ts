@@ -4,9 +4,9 @@ import { jbsApiClient } from "./jbs-client";
 
 export const appService = {
   //admin authentication
-  adminAuth: (data: {email: string, password: string}) => {
+  adminAuth: (data: { email: string; password: string }) => {
     try {
-        return apiClient.post("/admins/login", data);
+      return apiClient.post("/admins/login", data);
     } catch (error) {
       throw error;
     }
@@ -121,7 +121,10 @@ export const appService = {
       throw error;
     }
   },
-  createAttemptsMany: (data: { userInfoIds: string[]; assessmentIds: string[] }) => {
+  createAttemptsMany: (data: {
+    userInfoIds: string[];
+    assessmentIds: string[];
+  }) => {
     try {
       return apiClient.post("/attempts/many", data);
     } catch (error) {
@@ -157,7 +160,12 @@ export const appService = {
       throw error;
     }
   },
-  createAdmin: (data: {firstName: string, lastName: string, email: string, password: string}) => {
+  createAdmin: (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  }) => {
     try {
       return apiClient.post("/admins", data);
     } catch (error) {
@@ -171,7 +179,10 @@ export const appService = {
       throw error;
     }
   },
-  updateAdmin: (id: string, data: Partial<{firstName: string, lastName: string, email: string}>) => {
+  updateAdmin: (
+    id: string,
+    data: Partial<{ firstName: string; lastName: string; email: string }>
+  ) => {
     try {
       return apiClient.patch(`/admins/${id}`, data);
     } catch (error) {
@@ -199,23 +210,33 @@ export const appService = {
       throw error;
     }
   },
-  inviteAdmin: (data: {firstName: string, lastName: string, email: string}) => {
+  inviteAdmin: (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  }) => {
     try {
       return apiClient.post("/admins/invite", data);
     } catch (error) {
       throw error;
     }
   },
-  setPassword: (data: {token: string, password: string}) => {
+  setPassword: (data: { token: string; password: string }) => {
     try {
       return apiClient.post("/admins/accept-invitation", data);
     } catch (error) {
       throw error;
     }
   },
-  getAttemptEvents: (attemptId: string, page: number = 1, limit: number = 10) => {
+  getAttemptEvents: (
+    attemptId: string,
+    page: number = 1,
+    limit: number = 10
+  ) => {
     try {
-      return apiClient.get(`/attempt-event-tracking/attempt/${attemptId}?page=${page}&limit=${limit}`);
+      return apiClient.get(
+        `/attempt-event-tracking/attempt/${attemptId}?page=${page}&limit=${limit}`
+      );
     } catch (error) {
       throw error;
     }
@@ -264,10 +285,26 @@ export const appService = {
       throw error;
     }
   },
+  enableBasStudent: (id: string) => {
+    try {
+      return jbsApiClient.put(`/admin/jbs/users/${id}/enable-bas-student`);
+    } catch (error) {
+      throw error;
+    }
+  },
+  disableBasStudent: (id: string) => {
+    try {
+      return jbsApiClient.put(`/admin/jbs/users/${id}/disable-bas-student`);
+    } catch (error) {
+      throw error;
+    }
+  },
   // Job Postings
   getJobPostings: (page: number = 1, limit: number = 10) => {
     try {
-      return jbsApiClient.get(`/admin/jbs/job-postings?page=${page}&limit=${limit}`);
+      return jbsApiClient.get(
+        `/admin/jbs/job-postings?page=${page}&limit=${limit}`
+      );
     } catch (error) {
       throw error;
     }
@@ -359,14 +396,17 @@ export const appService = {
       throw error;
     }
   },
-  updateApiKey: (id: string, data: {
-    name?: string;
-    description?: string;
-    expiresAt?: string;
-    allowedOrigins?: string[];
-    rateLimit?: number;
-    permissions?: string[];
-  }) => {
+  updateApiKey: (
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      expiresAt?: string;
+      allowedOrigins?: string[];
+      rateLimit?: number;
+      permissions?: string[];
+    }
+  ) => {
     try {
       return apiClient.patch(`/api-keys/${id}`, data);
     } catch (error) {
@@ -447,7 +487,9 @@ export const appService = {
   },
   getUserSubscriptions: (page: number = 1, limit: number = 10) => {
     try {
-      return jbsApiClient.get(`/admin/jbs/subscriptions?page=${page}&limit=${limit}`);
+      return jbsApiClient.get(
+        `/admin/jbs/subscriptions?page=${page}&limit=${limit}`
+      );
     } catch (error) {
       throw error;
     }
@@ -466,9 +508,15 @@ export const appService = {
       throw error;
     }
   },
-  getUserSubscriptionsByUserId: (userId: string, page: number = 1, limit: number = 10) => {
+  getUserSubscriptionsByUserId: (
+    userId: string,
+    page: number = 1,
+    limit: number = 10
+  ) => {
     try {
-      return jbsApiClient.get(`/admin/jbs/subscriptions/user/${userId}?page=${page}&limit=${limit}`);
+      return jbsApiClient.get(
+        `/admin/jbs/subscriptions/user/${userId}?page=${page}&limit=${limit}`
+      );
     } catch (error) {
       throw error;
     }
@@ -476,7 +524,10 @@ export const appService = {
   // Push Notifications
   sendPushNotificationToUser: (data: { userId: string; message: string }) => {
     try {
-      return jbsApiClient.post("/admin/jbs/push-notifications/send-to-user", data);
+      return jbsApiClient.post(
+        "/admin/jbs/push-notifications/send-to-user",
+        data
+      );
     } catch (error) {
       throw error;
     }

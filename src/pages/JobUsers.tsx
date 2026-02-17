@@ -272,7 +272,7 @@ const JobUsers = () => {
         <Card className="border border-border/60 shadow-sm">
           <CardHeader className="gap-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <CardTitle>User roster</CardTitle>
+              <CardTitle>User </CardTitle>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
                 <div className="flex gap-2">
                   <Button
@@ -366,9 +366,9 @@ const JobUsers = () => {
                       : user.employerProfile?.name || "Unknown";
                     const createdAt = user.createdAt
                       ? format(
-                          new Date(user.createdAt),
-                          "MMM d, yyyy"
-                        )
+                        new Date(user.createdAt),
+                        "MMM d, yyyy"
+                      )
                       : "Unknown";
 
                     return (
