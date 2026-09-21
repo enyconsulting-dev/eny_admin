@@ -1,9 +1,8 @@
 import { store } from "@/store";
 
 const BASE_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3011/v1"
-    : "https://event-api-k0uh.onrender.com/v1";
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "https://event-api-k0uh.onrender.com/v1/" : "/api");
 
 const getAuthHeaders = () => {
   const state = store.getState();

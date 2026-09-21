@@ -1,5 +1,9 @@
 {
     "rewrites": [
+        {
+            "source": "/api/:path*",
+            "destination": "https://event-api-k0uh.onrender.com/v1/:path*"
+        },
         { "source": "/(.*)", "destination": "/" }
     ]
 }
